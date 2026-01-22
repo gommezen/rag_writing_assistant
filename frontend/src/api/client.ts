@@ -1,0 +1,106 @@
+/**
+ * API client for the RAG Writing Assistant backend.
+ */
+
+import type {
+  ApiError,
+  Document,
+  DocumentListResponse,
+  GenerationRequest,
+  GenerationResponse,
+  RegenerateSectionRequest,
+  RegenerateSectionResponse,
+  UploadDocumentParams,
+} from '../types';
+
+const API_BASE = '/api';
+
+class ApiClient {
+  private async request<T>(
+    endpoint: string,
+    options: RequestInit = {}
+  ): Promise<T> {
+    const url = `${API_BASE}${endpoint}`;
+
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        ...options.headers,
+      },
+    });
+
+    if (!response.ok) {
+      let error: ApiError;
+      try {
+        error = await response.json();
+      } catch {
+        error = { error: `Request failed with status ${response.status}` };
+      }
+      throw new Error(error.error);
+    }
+
+    return response.json();
+  }
+
+  // Health check
+  async healthCheck(): Promise<{ status: string; vector_store: Record<string, unknown> }> {
+    return this.request('/health');
+  }
+
+  // Document operations
+  async uploadDocument(params: UploadDocumentParams): Promise<Document> {
+    const formData = new FormData();
+    formData.append('file', params.file);
+    if (params.title) {
+      formData.append('title', params.title);
+    }
+    if (params.author) {
+      formData.append('author', params.author);
+    }
+
+    return this.request('/documents', {
+      method: 'POST',
+      body: formData,
+    });
+  }
+
+  async listDocuments(): Promise<DocumentListResponse> {
+    return this.request('/documents');
+  }
+
+  async getDocument(documentId: string): Promise<Document> {
+    return this.request(`/documents/${documentId}`);
+  }
+
+  async deleteDocument(documentId: string): Promise<{ status: string; document_id: string }> {
+    return this.request(`/documents/${documentId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Generation operations
+  async generateDraft(request: GenerationRequest): Promise<GenerationResponse> {
+    return this.request('/generate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(request),
+    });
+  }
+
+  async regenerateSection(
+    request: RegenerateSectionRequest
+  ): Promise<RegenerateSectionResponse> {
+    return this.request('/generate/section', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(request),
+    });
+  }
+}
+
+// Export singleton instance
+export const apiClient = new ApiClient();

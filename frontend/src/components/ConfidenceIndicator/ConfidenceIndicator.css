@@ -1,0 +1,33 @@
+.confidence-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-sm);
+}
+
+.confidence-indicator__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.confidence-indicator__label {
+  color: var(--color-text-secondary);
+}
+
+/* Confidence level variants */
+.confidence-indicator--high .confidence-indicator__dot {
+  background-color: var(--color-confidence-high);
+}
+
+.confidence-indicator--medium .confidence-indicator__dot {
+  background-color: var(--color-confidence-medium);
+}
+
+.confidence-indicator--low .confidence-indicator__dot {
+  background-color: var(--color-confidence-low);
+}
+
+.confidence-indicator--unknown .confidence-indicator__dot {
+  background-color: var(--color-confidence-unknown);
+}

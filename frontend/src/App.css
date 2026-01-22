@@ -1,0 +1,222 @@
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app__header {
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
+  padding: var(--spacing-md) var(--spacing-lg);
+}
+
+.app__title {
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.app__layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  flex: 1;
+  overflow: hidden;
+}
+
+.app__sidebar {
+  background: var(--color-bg);
+  border-right: 1px solid var(--color-border);
+  overflow-y: auto;
+  padding: var(--spacing-md);
+}
+
+.app__main {
+  display: flex;
+  flex-direction: column;
+  padding: var(--spacing-lg);
+  overflow-y: auto;
+  gap: var(--spacing-lg);
+}
+
+/* Sidebar Section */
+.sidebar-section__title {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--spacing-md);
+}
+
+/* Upload Area */
+.upload-area {
+  margin-bottom: var(--spacing-lg);
+}
+
+.upload-area__label {
+  display: block;
+  padding: var(--spacing-md);
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.upload-area__label:hover {
+  border-color: var(--color-primary);
+  background: var(--color-bg-tertiary);
+}
+
+.upload-area__input {
+  display: none;
+}
+
+.upload-area__text {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-primary);
+}
+
+.upload-area__hint {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  text-align: center;
+  margin-top: var(--spacing-xs);
+}
+
+/* Document List */
+.document-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.document-list__loading,
+.document-list__empty {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  text-align: center;
+  padding: var(--spacing-md);
+}
+
+/* Document Card */
+.document-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-sm);
+}
+
+.document-card__title {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text);
+  margin: 0 0 var(--spacing-xs) 0;
+}
+
+.document-card__meta {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.document-card__status {
+  display: inline-block;
+  font-size: var(--font-size-xs);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  margin-top: var(--spacing-xs);
+}
+
+.document-card__status--ready {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.document-card__status--processing {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.document-card__status--failed {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.document-card__status--pending {
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-muted);
+}
+
+.document-card__delete {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  background: none;
+  border: none;
+  padding: var(--spacing-xs);
+}
+
+.document-card__delete:hover {
+  color: var(--color-error);
+}
+
+/* Prompt Section */
+.prompt-section__label {
+  display: block;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text);
+  margin-bottom: var(--spacing-sm);
+}
+
+.prompt-section__input-group {
+  display: flex;
+  gap: var(--spacing-md);
+  align-items: flex-start;
+}
+
+.prompt-section__textarea {
+  flex: 1;
+  padding: var(--spacing-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.prompt-section__textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.prompt-section__button {
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background-color 0.15s;
+}
+
+.prompt-section__button:hover:not(:disabled) {
+  background: var(--color-primary-dark);
+}
+
+.prompt-section__button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Editor Section */
+.editor-section {
+  flex: 1;
+  min-height: 400px;
+}
