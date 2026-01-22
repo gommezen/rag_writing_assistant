@@ -262,30 +262,45 @@ class GenerationService:
     ) -> list[GeneratedSection]:
         """Parse generated content into sections.
 
-        Simple implementation: split by double newlines for paragraphs,
-        group into logical sections.
+        Split on markdown headings (## or ###) for structured documents.
+        For unstructured content like cover letters, keep as single section.
         """
-        paragraphs = [p.strip() for p in content.split("\n\n") if p.strip()]
+        import re
 
-        if not paragraphs:
-            return [
-                self._create_section(
-                    content=content,
-                    sources=sources,
-                    section_id=f"{generation_id}-0",
-                )
-            ]
+        # Check for markdown headings - if present, split on them
+        heading_pattern = r'^#{2,3}\s+.+$'
+        has_headings = bool(re.search(heading_pattern, content, re.MULTILINE))
 
-        # For MVP, create one section per significant paragraph group
-        sections = []
-        current_content = []
-        section_idx = 0
+        if has_headings:
+            # Split on markdown headings, keeping the heading with its content
+            parts = re.split(r'(^#{2,3}\s+.+$)', content, flags=re.MULTILINE)
+            sections = []
+            section_idx = 0
+            current_content = []
 
-        for para in paragraphs:
-            current_content.append(para)
+            for part in parts:
+                part = part.strip()
+                if not part:
+                    continue
 
-            # Create a new section every 2-3 paragraphs or on clear breaks
-            if len(current_content) >= 2 or para.endswith(":"):
+                if re.match(heading_pattern, part):
+                    # Save previous section if exists
+                    if current_content:
+                        section_text = "\n\n".join(current_content)
+                        section = self._create_section(
+                            content=section_text,
+                            sources=sources,
+                            section_id=f"{generation_id}-{section_idx}",
+                        )
+                        sections.append(section)
+                        section_idx += 1
+                        current_content = []
+                    current_content.append(part)
+                else:
+                    current_content.append(part)
+
+            # Don't forget remaining content
+            if current_content:
                 section_text = "\n\n".join(current_content)
                 section = self._create_section(
                     content=section_text,
@@ -293,20 +308,54 @@ class GenerationService:
                     section_id=f"{generation_id}-{section_idx}",
                 )
                 sections.append(section)
-                current_content = []
-                section_idx += 1
 
-        # Don't forget remaining content
-        if current_content:
-            section_text = "\n\n".join(current_content)
-            section = self._create_section(
-                content=section_text,
+            return sections if sections else [self._create_section(
+                content=content,
                 sources=sources,
-                section_id=f"{generation_id}-{section_idx}",
-            )
-            sections.append(section)
+                section_id=f"{generation_id}-0",
+            )]
 
-        return sections
+        # No headings found - treat as single cohesive document (e.g., cover letter)
+        # Split into sections only if content is very long (>1500 chars)
+        if len(content) > 1500:
+            paragraphs = [p.strip() for p in content.split("\n\n") if p.strip()]
+            sections = []
+            current_content = []
+            section_idx = 0
+
+            for para in paragraphs:
+                current_content.append(para)
+                # Create section every 3-4 paragraphs for long content
+                if len(current_content) >= 4:
+                    section_text = "\n\n".join(current_content)
+                    section = self._create_section(
+                        content=section_text,
+                        sources=sources,
+                        section_id=f"{generation_id}-{section_idx}",
+                    )
+                    sections.append(section)
+                    current_content = []
+                    section_idx += 1
+
+            if current_content:
+                section_text = "\n\n".join(current_content)
+                section = self._create_section(
+                    content=section_text,
+                    sources=sources,
+                    section_id=f"{generation_id}-{section_idx}",
+                )
+                sections.append(section)
+
+            return sections
+
+        # Short content without headings - keep as single section
+        return [
+            self._create_section(
+                content=content,
+                sources=sources,
+                section_id=f"{generation_id}-0",
+            )
+        ]
 
     def _create_section(
         self,

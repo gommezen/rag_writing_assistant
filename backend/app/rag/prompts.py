@@ -22,19 +22,21 @@ CRITICAL RULES:
 
 Your goal is transparency - users must be able to verify every claim you make."""
 
-    GENERATION_PROMPT = """Based on the following context, write a professional document section about: {topic}
+    GENERATION_PROMPT = """Write the following based on the provided context: {topic}
 
 CONTEXT:
 {context}
 
-INSTRUCTIONS:
+CRITICAL OUTPUT RULES:
+- Output ONLY the requested content - no preamble, introduction, or meta-commentary
+- Do NOT start with phrases like "Here is...", "Below is...", "I've written...", etc.
+- Start directly with the actual content (e.g., for a cover letter, start with "Dear...")
 - Write in a clear, professional tone
-- Structure the content logically with paragraphs
 - After each major claim or fact, cite the source using [Source N] notation
-- If you cannot find support for something in the context, do not write it
-- If the context is insufficient, explain what information is missing
+- If you cannot find support for something in the context, do not include it
+- If the context is insufficient for the entire request, write what you can and note gaps at the end
 
-Write the content now:"""
+Begin the content directly:"""
 
     SECTION_PROMPT = """Continue writing about: {topic}
 

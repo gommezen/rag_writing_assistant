@@ -20,13 +20,13 @@ class Settings(BaseSettings):
 
     # Ollama LLM settings
     ollama_base_url: str = "http://localhost:11434"
-    embedding_model: str = "nomic-embed-text"
-    generation_model: str = "llama3.2"
+    embedding_model: str = "mxbai-embed-large"
+    generation_model: str = "llama3.1:8b-instruct-q4_0"
 
     # RAG settings
     chunk_size: int = 500
     chunk_overlap: int = 100
-    similarity_threshold: float = 0.7
+    similarity_threshold: float = 0.35
     top_k_retrieval: int = 10
 
     # Data paths

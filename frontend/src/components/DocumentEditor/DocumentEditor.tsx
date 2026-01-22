@@ -8,7 +8,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import type { GeneratedSection, SourceReference } from '../../types';
+import type { GeneratedSection } from '../../types';
 import { ConfidenceIndicator } from '../ConfidenceIndicator';
 import { GenerationControls } from '../GenerationControls';
 import { SourceCard } from '../SourceCard';
@@ -73,7 +73,7 @@ export function DocumentEditor({
             onChange={(e) => handleContentChange(e, section.section_id)}
             onRegenerate={onRegenerate}
             onAccept={onAccept}
-            onRevert={onRevert}
+            {...(onRevert ? { onRevert } : {})}
           />
         ))}
       </div>
@@ -147,7 +147,7 @@ function SectionEditor({
         isRegenerating={isRegenerating}
         onRegenerate={onRegenerate}
         onAccept={onAccept}
-        onRevert={onRevert}
+        {...(onRevert ? { onRevert } : {})}
       />
     </section>
   );

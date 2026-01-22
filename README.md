@@ -2,6 +2,25 @@
 
 A governance-first RAG (Retrieval-Augmented Generation) writing assistant. The system emphasizes transparency, auditability, and user control over AI-generated content.
 
+## What is RAG?
+
+**RAG (Retrieval-Augmented Generation)** does NOT learn or train on your documents. Instead:
+
+1. **Upload**: Your documents are chunked and converted to vectors (mathematical representations)
+2. **Query**: When you generate, your prompt searches for similar chunks
+3. **Generate**: The LLM receives your prompt + retrieved chunks, producing grounded content with citations
+
+**Key distinction**: The system *retrieves and references* your writing—it doesn't *learn your style*.
+
+### Benefits over plain LLM generation
+
+| Without RAG | With RAG |
+|-------------|----------|
+| LLM makes things up | LLM references your actual documents |
+| No sources shown | Every claim traceable to source |
+| Black box output | Confidence levels + warnings shown |
+| Generic content | Content derived from YOUR materials |
+
 ## Architecture
 
 - **Backend**: Python/FastAPI with FAISS vector store and Ollama for LLM
