@@ -31,12 +31,13 @@ CRITICAL OUTPUT RULES:
 - Output ONLY the requested content - no preamble, introduction, or meta-commentary
 - Do NOT start with phrases like "Here is...", "Below is...", "I've written...", etc.
 - Write in a clear, professional tone
+- Structure your response with clear sections using markdown headings (## Section Title)
 - MANDATORY: Include [Source N] citations inline after claims or facts. Example: "I have 5 years of Python experience [Source 2] and led a team of 10 developers [Source 4]."
 - ONLY cite sources that exist: [Source 1] through [Source {num_sources}]. Do NOT cite any source number higher than {num_sources}.
 - Every paragraph MUST have at least one citation - if you cannot cite something, do not include it
 - If the context is insufficient for the entire request, write what you can and note gaps at the end
 
-Begin the content directly:"""
+Begin with ## followed by your first section title:"""
 
     SECTION_PROMPT = """Continue writing about: {topic}
 

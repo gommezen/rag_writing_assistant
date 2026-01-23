@@ -85,6 +85,31 @@ npm run test
 │   └── src/test/
 ```
 
+## Configuration
+
+Create `backend/.env` to customize settings:
+
+```env
+# LLM Models (must be available in Ollama)
+GENERATION_MODEL=qwen2.5:7b-instruct-q4_0
+EMBEDDING_MODEL=mxbai-embed-large
+
+# Retrieval settings
+SIMILARITY_THRESHOLD=0.35
+TOP_K=10
+
+# Ollama connection
+OLLAMA_BASE_URL=http://localhost:11434
+```
+
+### Recommended Models
+
+| Model | Use Case | Notes |
+|-------|----------|-------|
+| `qwen2.5:7b-instruct-q4_0` | Generation (default) | Good prose quality, fast |
+| `llama3.1:8b-instruct-q5_K_M` | Generation | Better reasoning, needs more RAM |
+| `mxbai-embed-large` | Embeddings (default) | High quality retrieval |
+
 ## API Endpoints
 
 | Endpoint | Method | Description |

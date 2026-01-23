@@ -8,6 +8,9 @@
   background: var(--color-bg);
   border-bottom: 1px solid var(--color-border);
   padding: var(--spacing-md) var(--spacing-lg);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .app__title {
@@ -15,6 +18,29 @@
   font-weight: 600;
   color: var(--color-text);
   margin: 0;
+}
+
+[data-theme="dark"] .app__title {
+  background: linear-gradient(135deg, #38bdf8, #a78bfa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Theme Toggle */
+.theme-toggle {
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-size-lg);
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.15s;
+}
+
+.theme-toggle:hover {
+  background: var(--color-bg-secondary);
+  transform: scale(1.05);
 }
 
 .app__layout {
@@ -213,11 +239,17 @@
   font-size: var(--font-size-base);
   line-height: 1.5;
   resize: vertical;
+  background: var(--color-bg);
+  color: var(--color-text);
 }
 
 .prompt-section__textarea:focus {
   outline: none;
   border-color: var(--color-primary);
+}
+
+[data-theme="dark"] .prompt-section__textarea:focus {
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
 }
 
 .prompt-section__button {
@@ -228,11 +260,20 @@
   border-radius: var(--radius-md);
   font-weight: 500;
   white-space: nowrap;
-  transition: background-color 0.15s;
+  transition: background-color 0.15s, box-shadow 0.15s;
 }
 
 .prompt-section__button:hover:not(:disabled) {
   background: var(--color-primary-dark);
+}
+
+[data-theme="dark"] .prompt-section__button {
+  color: #0f172a;
+  font-weight: 600;
+}
+
+[data-theme="dark"] .prompt-section__button:hover:not(:disabled) {
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.4);
 }
 
 .prompt-section__button:disabled {

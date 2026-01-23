@@ -7,7 +7,7 @@
  * - Right sidebar: Source details (part of DocumentEditor)
  */
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { DocumentEditor } from './components/DocumentEditor';
 import { WarningBanner } from './components/WarningBanner';
 import {
@@ -27,7 +27,17 @@ function App() {
   const [regeneratingSection, setRegeneratingSection] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [acceptedSection, setAcceptedSection] = useState<string | null>(null);
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem('theme');
+    return saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  });
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Apply theme to document
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
+    localStorage.setItem('theme', darkMode ? 'dark' : 'light');
+  }, [darkMode]);
 
   // Document hooks
   const { data: documentsData, isLoading: isLoadingDocuments } = useDocuments();
@@ -152,11 +162,12 @@ function App() {
       }
 
       try {
-        const result = await regenerateMutation.mutateAsync({
+        const request = {
           section_id: sectionId,
           original_content: currentSection.content,
-          refinement_prompt: prompt || undefined,
-        });
+          ...(prompt ? { refinement_prompt: prompt } : {}),
+        };
+        const result = await regenerateMutation.mutateAsync(request);
 
         setSections((prev) =>
           prev.map((section) =>
@@ -190,6 +201,14 @@ function App() {
     <div className="app">
       <header className="app__header">
         <h1 className="app__title">RAG Writing Assistant</h1>
+        <button
+          type="button"
+          className="theme-toggle"
+          onClick={() => setDarkMode((prev) => !prev)}
+          aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+        >
+          {darkMode ? '☀️' : '🌙'}
+        </button>
       </header>
 
       <div className="app__layout">

@@ -405,7 +405,7 @@ class GenerationService:
         cited_count: int,
         available_count: int,
     ) -> ConfidenceLevel:
-        """Assess confidence level based on citation coverage."""
+        """Assess confidence level based on citation count per section."""
         if available_count == 0:
             return ConfidenceLevel.LOW
 
@@ -422,15 +422,12 @@ class GenerationService:
             if marker in content_lower:
                 return ConfidenceLevel.LOW
 
-        # Assess based on citation ratio
+        # Assess based on absolute citation count (more practical for sections)
         if cited_count == 0:
             return ConfidenceLevel.UNKNOWN
-
-        citation_ratio = cited_count / max(available_count, 1)
-
-        if citation_ratio >= 0.5:
+        elif cited_count >= 3:
             return ConfidenceLevel.HIGH
-        elif citation_ratio >= 0.2:
+        elif cited_count >= 1:
             return ConfidenceLevel.MEDIUM
         else:
             return ConfidenceLevel.LOW

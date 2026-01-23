@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 #### Frontend
+- **Dark mode**: Toggle between light and dark themes with system preference detection and localStorage persistence
 - **Drag and drop file upload**: Files can now be uploaded by dragging and dropping onto the upload area
 - **Accept button visual feedback**: Shows "Accepted!" badge and green border animation when section is accepted
 
@@ -22,6 +23,13 @@ All notable changes to this project will be documented in this file.
 #### Frontend
 - **Document card visibility**: Improved text contrast and added border for better readability in sidebar
 - **Warning banner formatting**: Only strips snake_case prefixes, preserving messages with colons in content
+- **Source sidebar selection**: Sources now correctly update when selecting different sections or after new generation
+
+### Changed
+
+#### Backend
+- **Confidence calculation**: Now based on absolute citation count per section (3+ = HIGH, 1-2 = MEDIUM, 0 = UNKNOWN) instead of ratio against all sources
+- **Generation model**: Default changed to `qwen2.5:7b-instruct-q4_0` for improved prose quality (configurable via `GENERATION_MODEL` env var)
 
 ---
 
@@ -64,8 +72,9 @@ All notable changes to this project will be documented in this file.
 #### Configuration
 - Ollama integration configured:
   - Embedding model: `mxbai-embed-large`
-  - Generation model: `llama3.1:8b-instruct-q4_0`
+  - Generation model: configurable (default: `qwen2.5:7b-instruct-q4_0`)
 - Environment-based configuration via pydantic-settings
+- Configurable similarity threshold via `SIMILARITY_THRESHOLD` env var
 - TypeScript strict mode with test files excluded from build
 
 #### Documentation

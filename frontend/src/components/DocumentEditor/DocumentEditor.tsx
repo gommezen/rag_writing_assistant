@@ -7,7 +7,7 @@
  * - Allows section-level regeneration and editing
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type { GeneratedSection } from '../../types';
 import { ConfidenceIndicator } from '../ConfidenceIndicator';
 import { GenerationControls } from '../GenerationControls';
@@ -37,6 +37,20 @@ export function DocumentEditor({
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(
     sections[0]?.section_id ?? null
   );
+
+  // Update selection when sections change (e.g., new generation)
+  useEffect(() => {
+    const firstSection = sections[0];
+    if (firstSection) {
+      // If current selection doesn't exist in new sections, select first
+      const currentExists = sections.some((s) => s.section_id === selectedSectionId);
+      if (!currentExists) {
+        setSelectedSectionId(firstSection.section_id);
+      }
+    } else {
+      setSelectedSectionId(null);
+    }
+  }, [sections, selectedSectionId]);
 
   const selectedSection = sections.find((s) => s.section_id === selectedSectionId);
 
