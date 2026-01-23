@@ -8,6 +8,7 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { Sun, Moon, ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import { DocumentEditor } from './components/DocumentEditor';
 import { WarningBanner } from './components/WarningBanner';
 import {
@@ -27,6 +28,7 @@ function App() {
   const [regeneratingSection, setRegeneratingSection] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [acceptedSection, setAcceptedSection] = useState<string | null>(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('theme');
     return saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
@@ -197,6 +199,19 @@ function App() {
     setTimeout(() => setAcceptedSection(null), 1500);
   }, []);
 
+  // Handle export generated content as TXT
+  const handleExport = useCallback(() => {
+    if (sections.length === 0) return;
+    const content = sections.map((s) => s.content).join('\n\n');
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'generated-content.txt';
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [sections]);
+
   return (
     <div className="app">
       <header className="app__header">
@@ -207,43 +222,55 @@ function App() {
           onClick={() => setDarkMode((prev) => !prev)}
           aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
         >
-          {darkMode ? '☀️' : '🌙'}
+          {darkMode ? <Sun size={20} /> : <Moon size={20} />}
         </button>
       </header>
 
-      <div className="app__layout">
+      <div className={`app__layout ${sidebarCollapsed ? 'app__layout--collapsed' : ''}`}>
         {/* Left Sidebar - Document Management */}
-        <aside className="app__sidebar">
+        <aside className={`app__sidebar ${sidebarCollapsed ? 'app__sidebar--collapsed' : ''}`}>
           <section className="sidebar-section">
-            <h2 className="sidebar-section__title">Documents</h2>
-
-            <div
-              className={`upload-area ${isDragOver ? 'upload-area--drag-over' : ''}`}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-            >
-              <label className="upload-area__label">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".pdf,.docx,.txt"
-                  onChange={handleFileUpload}
-                  disabled={uploadMutation.isPending}
-                  className="upload-area__input"
-                />
-                <span className="upload-area__text">
-                  {uploadMutation.isPending
-                    ? 'Uploading...'
-                    : isDragOver
-                    ? 'Drop file here'
-                    : 'Upload Document'}
-                </span>
-              </label>
-              <p className="upload-area__hint">PDF, DOCX, or TXT</p>
+            <div className="sidebar-section__header">
+              <h2 className={`sidebar-section__title ${sidebarCollapsed ? 'sidebar-section__title--hidden' : ''}`}>Documents</h2>
+              <button
+                type="button"
+                className="sidebar-collapse-btn"
+                onClick={() => setSidebarCollapsed((prev) => !prev)}
+                aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              >
+                {sidebarCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+              </button>
             </div>
 
-            <div className="document-list">
+            {!sidebarCollapsed && (
+              <div
+                className={`upload-area ${isDragOver ? 'upload-area--drag-over' : ''}`}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+              >
+                <label className="upload-area__label">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,.docx,.txt"
+                    onChange={handleFileUpload}
+                    disabled={uploadMutation.isPending}
+                    className="upload-area__input"
+                  />
+                  <span className="upload-area__text">
+                    {uploadMutation.isPending
+                      ? 'Uploading...'
+                      : isDragOver
+                      ? 'Drop file here'
+                      : 'Upload Document'}
+                  </span>
+                </label>
+                <p className="upload-area__hint">PDF, DOCX, or TXT</p>
+              </div>
+            )}
+
+            <div className={`document-list ${sidebarCollapsed ? 'document-list--collapsed' : ''}`}>
               {isLoadingDocuments ? (
                 <p className="document-list__loading">Loading documents...</p>
               ) : documents.length === 0 ? (
@@ -296,6 +323,19 @@ function App() {
 
           {/* Document Editor */}
           <section className="editor-section">
+            {sections.length > 0 && (
+              <div className="editor-section__header">
+                <button
+                  type="button"
+                  className="export-btn"
+                  onClick={handleExport}
+                  aria-label="Export content as text file"
+                >
+                  <Download size={16} />
+                  <span>Export TXT</span>
+                </button>
+              </div>
+            )}
             <DocumentEditor
               sections={sections}
               onSectionChange={handleSectionChange}
