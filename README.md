@@ -1,93 +1,51 @@
 # RAG Writing Assistant
 
-A governance-first RAG (Retrieval-Augmented Generation) writing assistant. The system emphasizes transparency, auditability, and user control over AI-generated content.
+Generate AI-written content grounded in your own documents, with full source transparency.
 
-## What is RAG?
+## Features
 
-**RAG (Retrieval-Augmented Generation)** does NOT learn or train on your documents. Instead:
+- **Document upload** - PDF, DOCX, and TXT with drag-and-drop support
+- **Grounded generation** - AI content derived from your uploaded materials
+- **Source citations** - Every claim traced back to retrieved documents
+- **Confidence indicators** - Visual cues for high/medium/low confidence content
+- **Section-level editing** - Regenerate or manually edit individual sections
+- **Fully local** - Documents never leave your machine (runs on Ollama)
 
-1. **Upload**: Your documents are chunked and converted to vectors (mathematical representations)
-2. **Query**: When you generate, your prompt searches for similar chunks
-3. **Generate**: The LLM receives your prompt + retrieved chunks, producing grounded content with citations
+## Quick Start
 
-**Key distinction**: The system *retrieves and references* your writing—it doesn't *learn your style*.
+1. **Install Ollama** from [ollama.ai](https://ollama.ai/)
 
-### Benefits over plain LLM generation
+2. **Pull required models**:
+   ```bash
+   ollama pull qwen2.5:7b-instruct-q4_0
+   ollama pull mxbai-embed-large
+   ```
 
-| Without RAG                                      | With RAG                                          |
-| ------------------------------------------------ | ------------------------------------------------- |
-| Model may invent details when context is missing | Model grounds output in retrieved documents       |
-| No explicit source grounding                     | Claims can be traced to retrieved sources         |
-| Output confidence is implicit                    | Uncertainty and gaps can be surfaced explicitly   |
-| Generic phrasing based on training data          | Content derived from *your* materials and context |
+3. **Start the backend**:
+   ```bash
+   cd backend
+   pip install -r requirements.txt
+   uvicorn app.main:app --reload
+   ```
 
-## Architecture
+4. **Start the frontend**:
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
 
-- **Backend**: Python/FastAPI with FAISS vector store and Ollama for LLM
-- **Frontend**: React/TypeScript with React Query
+5. **Open** http://localhost:5173 in your browser
 
-## Prerequisites
+## Requirements
 
 - Python 3.11+
 - Node.js 18+
-- [Ollama](https://ollama.ai/) running locally
-
-## Setup
-
-### Backend
-
-```bash
-cd backend
-pip install -r requirements.txt
-uvicorn app.main:app --reload
-```
-
-### Frontend
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-## Testing
-
-### Backend (115 tests)
-
-```bash
-cd backend
-pytest tests/ -v
-```
-
-### Frontend (104 tests)
-
-```bash
-cd frontend
-npm run test
-```
-
-## Project Structure
-
-```
-├── backend/
-│   ├── app/
-│   │   ├── api/routes/      # API endpoints
-│   │   ├── models/          # Pydantic models
-│   │   ├── rag/             # Vector store, embeddings, chunking
-│   │   └── services/        # Business logic
-│   └── tests/
-├── frontend/
-│   ├── src/
-│   │   ├── api/             # API client
-│   │   ├── components/      # React components
-│   │   ├── hooks/           # React Query hooks
-│   │   └── types/           # TypeScript types
-│   └── src/test/
-```
+- Ollama running locally
 
 ## Configuration
 
-Create `backend/.env` to customize settings:
+Create `backend/.env` to customize:
 
 ```env
 # LLM Models (must be available in Ollama)
@@ -102,7 +60,7 @@ TOP_K=10
 OLLAMA_BASE_URL=http://localhost:11434
 ```
 
-### Recommended Models
+### Alternative Models
 
 | Model | Use Case | Notes |
 |-------|----------|-------|
@@ -110,7 +68,27 @@ OLLAMA_BASE_URL=http://localhost:11434
 | `llama3.1:8b-instruct-q5_K_M` | Generation | Better reasoning, needs more RAM |
 | `mxbai-embed-large` | Embeddings (default) | High quality retrieval |
 
-## API Endpoints
+## Project Structure
+
+```
+backend/
+├── app/
+│   ├── api/routes/      # API endpoints
+│   ├── models/          # Pydantic models
+│   ├── rag/             # Vector store, embeddings, chunking
+│   └── services/        # Business logic
+└── tests/
+
+frontend/
+├── src/
+│   ├── api/             # API client
+│   ├── components/      # React components
+│   ├── hooks/           # React Query hooks
+│   └── types/           # TypeScript types
+└── src/test/
+```
+
+## API Reference
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
@@ -121,6 +99,23 @@ OLLAMA_BASE_URL=http://localhost:11434
 | `/api/generate` | POST | Generate draft |
 | `/api/generate/section` | POST | Regenerate section |
 | `/api/health` | GET | Health check |
+
+## Development
+
+### Run tests
+
+```bash
+# Backend (pytest)
+cd backend && pytest tests/ -v
+
+# Frontend (vitest)
+cd frontend && npm run test
+```
+
+### Architecture
+
+- **Backend**: Python/FastAPI with FAISS vector store
+- **Frontend**: React/TypeScript with React Query
 
 ## License
 

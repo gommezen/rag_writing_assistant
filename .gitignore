@@ -88,10 +88,15 @@ node_modules/
 
 # Testing
 coverage/
+.nyc_output/
 
 # Production build
 frontend/dist/
 frontend/build/
+
+# Source maps and caches
+frontend/**/*.map
+frontend/.eslintcache
 
 # Misc
 .DS_Store
@@ -151,12 +156,23 @@ tramp
 # Project-specific
 # ============================================================================
 
+# Root data directory (user uploads during development)
+/data/
+
 # Data directories (contain user documents and vectors)
 backend/data/documents/
 backend/data/vectors/
 
 # Keep the data directory structure but not contents
 !backend/data/.gitkeep
+
+# Temporary processing
+backend/tmp/
+backend/uploads/
+
+# Database files
+*.db
+*.sqlite
 
 # Logs
 *.log
