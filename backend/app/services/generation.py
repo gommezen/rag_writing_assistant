@@ -19,7 +19,7 @@ from ..models import (
     RegenerationResult,
     SourceReference,
 )
-from ..rag import build_generation_prompt, build_regeneration_prompt, extract_citations
+from ..rag import build_generation_prompt, build_regeneration_prompt, extract_citations, sanitize_citations
 from .retrieval import get_retrieval_service
 from .validation import get_validation_service
 
@@ -107,6 +107,9 @@ class GenerationService:
                 error=str(e),
             )
             raise LLMError(str(e), self.settings.generation_model)
+
+        # Sanitize citations - remove any that reference non-existent sources
+        response = sanitize_citations(response, len(sources))
 
         # Parse response into sections
         sections = self._parse_into_sections(
@@ -200,6 +203,9 @@ class GenerationService:
             response = await self._generate_with_llm(system_prompt, user_prompt)
         except Exception as e:
             raise LLMError(str(e), self.settings.generation_model)
+
+        # Sanitize citations - remove any that reference non-existent sources
+        response = sanitize_citations(response, len(sources))
 
         # Create new section
         section = self._create_section(

@@ -22,6 +22,7 @@ interface DocumentEditorProps {
   onAccept: (sectionId: string) => void;
   onRevert?: (sectionId: string) => void;
   regeneratingSection?: string | null;
+  acceptedSection?: string | null;
 }
 
 export function DocumentEditor({
@@ -31,6 +32,7 @@ export function DocumentEditor({
   onAccept,
   onRevert,
   regeneratingSection,
+  acceptedSection,
 }: DocumentEditorProps) {
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(
     sections[0]?.section_id ?? null
@@ -69,6 +71,7 @@ export function DocumentEditor({
             index={index}
             isSelected={section.section_id === selectedSectionId}
             isRegenerating={regeneratingSection === section.section_id}
+            isAccepted={acceptedSection === section.section_id}
             onClick={() => handleSectionClick(section.section_id)}
             onChange={(e) => handleContentChange(e, section.section_id)}
             onRegenerate={onRegenerate}
@@ -92,6 +95,7 @@ interface SectionEditorProps {
   index: number;
   isSelected: boolean;
   isRegenerating: boolean;
+  isAccepted?: boolean;
   onClick: () => void;
   onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
   onRegenerate: (sectionId: string) => void;
@@ -104,6 +108,7 @@ function SectionEditor({
   index,
   isSelected,
   isRegenerating,
+  isAccepted,
   onClick,
   onChange,
   onRegenerate,
@@ -114,7 +119,7 @@ function SectionEditor({
     <section
       className={`section-editor ${isSelected ? 'section-editor--selected' : ''} ${
         section.is_user_edited ? 'section-editor--edited' : ''
-      }`}
+      } ${isAccepted ? 'section-editor--accepted' : ''}`}
       onClick={onClick}
       aria-label={`Section ${index + 1}`}
     >
@@ -123,6 +128,9 @@ function SectionEditor({
           Section {index + 1}
           {section.is_user_edited && (
             <span className="section-editor__edited-badge">Edited</span>
+          )}
+          {isAccepted && (
+            <span className="section-editor__accepted-badge">Accepted!</span>
           )}
         </span>
         <ConfidenceIndicator level={section.confidence} />

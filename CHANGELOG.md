@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.1] - 2026-01-23
+
+### Added
+
+#### Frontend
+- **Drag and drop file upload**: Files can now be uploaded by dragging and dropping onto the upload area
+- **Accept button visual feedback**: Shows "Accepted!" badge and green border animation when section is accepted
+
+### Fixed
+
+#### Backend
+- **Invalid source citations**: LLM now explicitly told available source count; invalid citations (e.g., [Source 15] when only 10 sources exist) are automatically removed
+- **Confidence level detection**: Fixed prompt to mandate inline citations with examples, preventing "Unknown" confidence when LLM omitted citations
+- **Regenerate section API**: Fixed endpoint to properly accept `original_content` and `refinement_prompt` parameters
+- **Deprecated datetime.utcnow()**: Replaced with timezone-aware `datetime.now(UTC)` for Python 3.12+ compatibility
+- **Health endpoint typing**: Now returns properly typed `HealthResponse` model
+
+#### Frontend
+- **Document card visibility**: Improved text contrast and added border for better readability in sidebar
+- **Warning banner formatting**: Only strips snake_case prefixes, preserving messages with colons in content
+
+---
+
 ## [0.1.0] - 2026-01-22
 
 ### Added

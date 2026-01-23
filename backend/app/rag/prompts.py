@@ -24,16 +24,16 @@ Your goal is transparency - users must be able to verify every claim you make.""
 
     GENERATION_PROMPT = """Write the following based on the provided context: {topic}
 
-CONTEXT:
+CONTEXT ({num_sources} sources available - you may ONLY cite [Source 1] through [Source {num_sources}]):
 {context}
 
 CRITICAL OUTPUT RULES:
 - Output ONLY the requested content - no preamble, introduction, or meta-commentary
 - Do NOT start with phrases like "Here is...", "Below is...", "I've written...", etc.
-- Start directly with the actual content (e.g., for a cover letter, start with "Dear...")
 - Write in a clear, professional tone
-- After each major claim or fact, cite the source using [Source N] notation
-- If you cannot find support for something in the context, do not include it
+- MANDATORY: Include [Source N] citations inline after claims or facts. Example: "I have 5 years of Python experience [Source 2] and led a team of 10 developers [Source 4]."
+- ONLY cite sources that exist: [Source 1] through [Source {num_sources}]. Do NOT cite any source number higher than {num_sources}.
+- Every paragraph MUST have at least one citation - if you cannot cite something, do not include it
 - If the context is insufficient for the entire request, write what you can and note gaps at the end
 
 Begin the content directly:"""
@@ -58,17 +58,17 @@ CONTEXT:
 Rewritten section:"""
 
 
-def format_context(sources: list[dict]) -> str:
+def format_context(sources: list[dict]) -> tuple[str, int]:
     """Format retrieved sources into context string.
 
     Args:
         sources: List of source dictionaries with 'content' and 'metadata'
 
     Returns:
-        Formatted context string with source labels
+        Tuple of (formatted context string, number of sources)
     """
     if not sources:
-        return "No relevant sources found."
+        return "No relevant sources found.", 0
 
     context_parts = []
     for i, source in enumerate(sources, 1):
@@ -77,7 +77,7 @@ def format_context(sources: list[dict]) -> str:
 
         context_parts.append(f"[Source {i}] (from: {doc_title})\n{content}")
 
-    return "\n\n---\n\n".join(context_parts)
+    return "\n\n---\n\n".join(context_parts), len(sources)
 
 
 def build_generation_prompt(
@@ -93,11 +93,12 @@ def build_generation_prompt(
     Returns:
         Tuple of (system_prompt, user_prompt)
     """
-    context = format_context(sources)
+    context, num_sources = format_context(sources)
 
     user_prompt = PromptTemplates.GENERATION_PROMPT.format(
         topic=topic,
         context=context,
+        num_sources=num_sources if num_sources > 0 else 0,
     )
 
     return PromptTemplates.SYSTEM_PROMPT, user_prompt
@@ -118,7 +119,7 @@ def build_regeneration_prompt(
     Returns:
         Tuple of (system_prompt, user_prompt)
     """
-    context = format_context(sources)
+    context, _ = format_context(sources)
 
     instructions = refinement_instructions or "Improve clarity and ensure all claims are well-supported."
 
@@ -145,3 +146,25 @@ def extract_citations(text: str) -> list[int]:
     pattern = r"\[Source (\d+)\]"
     matches = re.findall(pattern, text)
     return sorted(set(int(m) for m in matches))
+
+
+def sanitize_citations(text: str, max_source: int) -> str:
+    """Remove citations that reference non-existent sources.
+
+    Args:
+        text: Generated text with [Source N] citations
+        max_source: Maximum valid source number
+
+    Returns:
+        Text with invalid citations removed
+    """
+    import re
+
+    def replace_invalid(match: re.Match) -> str:
+        source_num = int(match.group(1))
+        if source_num < 1 or source_num > max_source:
+            return ""  # Remove invalid citation
+        return match.group(0)  # Keep valid citation
+
+    pattern = r"\[Source (\d+)\]"
+    return re.sub(pattern, replace_invalid, text)

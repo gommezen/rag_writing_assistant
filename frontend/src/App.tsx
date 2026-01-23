@@ -7,7 +7,7 @@
  * - Right sidebar: Source details (part of DocumentEditor)
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { DocumentEditor } from './components/DocumentEditor';
 import { WarningBanner } from './components/WarningBanner';
 import {
@@ -25,6 +25,9 @@ function App() {
   const [sections, setSections] = useState<GeneratedSection[]>([]);
   const [globalWarnings, setGlobalWarnings] = useState<string[]>([]);
   const [regeneratingSection, setRegeneratingSection] = useState<string | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [acceptedSection, setAcceptedSection] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Document hooks
   const { data: documentsData, isLoading: isLoadingDocuments } = useDocuments();
@@ -37,20 +40,60 @@ function App() {
 
   const documents = documentsData?.documents ?? [];
 
-  // Handle file upload
-  const handleFileUpload = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
+  // Handle file upload (from input or drag & drop)
+  const uploadFile = useCallback(
+    async (file: File) => {
+      const validTypes = ['.pdf', '.docx', '.txt'];
+      const ext = file.name.toLowerCase().slice(file.name.lastIndexOf('.'));
+      if (!validTypes.includes(ext)) {
+        setGlobalWarnings(['Invalid file type. Please upload PDF, DOCX, or TXT files.']);
+        return;
+      }
 
       try {
         await uploadMutation.mutateAsync({ file });
-        e.target.value = ''; // Reset input
       } catch (error) {
         console.error('Upload failed:', error);
       }
     },
     [uploadMutation]
+  );
+
+  const handleFileUpload = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      await uploadFile(file);
+      e.target.value = ''; // Reset input
+    },
+    [uploadFile]
+  );
+
+  // Drag and drop handlers
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+  }, []);
+
+  const handleDrop = useCallback(
+    async (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDragOver(false);
+
+      const file = e.dataTransfer.files?.[0];
+      if (file) {
+        await uploadFile(file);
+      }
+    },
+    [uploadFile]
   );
 
   // Handle document deletion
@@ -129,7 +172,7 @@ function App() {
     [prompt, sections, regenerateMutation]
   );
 
-  // Handle section accept (currently just marks as not edited)
+  // Handle section accept with visual feedback
   const handleAccept = useCallback((sectionId: string) => {
     setSections((prev) =>
       prev.map((section) =>
@@ -138,6 +181,9 @@ function App() {
           : section
       )
     );
+    // Show accepted feedback briefly
+    setAcceptedSection(sectionId);
+    setTimeout(() => setAcceptedSection(null), 1500);
   }, []);
 
   return (
@@ -152,9 +198,15 @@ function App() {
           <section className="sidebar-section">
             <h2 className="sidebar-section__title">Documents</h2>
 
-            <div className="upload-area">
+            <div
+              className={`upload-area ${isDragOver ? 'upload-area--drag-over' : ''}`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
               <label className="upload-area__label">
                 <input
+                  ref={fileInputRef}
                   type="file"
                   accept=".pdf,.docx,.txt"
                   onChange={handleFileUpload}
@@ -162,7 +214,11 @@ function App() {
                   className="upload-area__input"
                 />
                 <span className="upload-area__text">
-                  {uploadMutation.isPending ? 'Uploading...' : 'Upload Document'}
+                  {uploadMutation.isPending
+                    ? 'Uploading...'
+                    : isDragOver
+                    ? 'Drop file here'
+                    : 'Upload Document'}
                 </span>
               </label>
               <p className="upload-area__hint">PDF, DOCX, or TXT</p>
@@ -227,6 +283,7 @@ function App() {
               onRegenerate={handleRegenerate}
               onAccept={handleAccept}
               regeneratingSection={regeneratingSection}
+              acceptedSection={acceptedSection}
             />
           </section>
         </main>

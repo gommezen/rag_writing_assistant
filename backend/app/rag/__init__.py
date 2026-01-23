@@ -8,6 +8,7 @@ from .prompts import (
     build_regeneration_prompt,
     extract_citations,
     format_context,
+    sanitize_citations,
 )
 from .vectorstore import VectorStore, get_vector_store
 
@@ -24,6 +25,7 @@ __all__ = [
     "build_regeneration_prompt",
     "extract_citations",
     "format_context",
+    "sanitize_citations",
     # Vector store
     "VectorStore",
     "get_vector_store",
