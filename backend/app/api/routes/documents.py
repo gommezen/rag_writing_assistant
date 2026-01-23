@@ -1,5 +1,6 @@
 """Document management endpoints."""
 
+import asyncio
 from typing import Any
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
@@ -52,14 +53,15 @@ async def upload_document(
     title: str | None = Form(default=None, description="Optional document title"),
     author: str | None = Form(default=None, description="Optional document author"),
 ) -> DocumentResponse:
-    """Upload and ingest a document.
+    """Upload and ingest a document (non-blocking).
 
     Supported formats:
     - PDF (.pdf)
     - Word Document (.docx)
     - Plain Text (.txt)
 
-    The document will be chunked and indexed for retrieval.
+    Returns immediately with PENDING status. Poll GET /documents/{id}
+    to check processing status. Document will be READY when indexing is complete.
     """
     if not file.filename:
         raise HTTPException(status_code=400, detail="Filename is required")
@@ -74,12 +76,21 @@ async def upload_document(
         custom_metadata["author"] = author
 
     try:
-        document = await service.ingest_document(
-            file=file.file,
+        # Read file content into memory (fast)
+        file_content = await file.read()
+
+        # Create document record (fast, returns immediately)
+        document = service.create_document_record(
             filename=file.filename,
             metadata=custom_metadata if custom_metadata else None,
         )
 
+        # Schedule background processing (does not block)
+        asyncio.create_task(
+            service.process_document_background(document.document_id, file_content)
+        )
+
+        # Return immediately with PENDING status
         return DocumentResponse(
             document_id=document.document_id,
             filename=document.filename,
@@ -94,8 +105,6 @@ async def upload_document(
 
     except UnsupportedDocumentTypeError as e:
         raise HTTPException(status_code=400, detail=e.message)
-    except DocumentProcessingError as e:
-        raise HTTPException(status_code=422, detail=e.message)
 
 
 @router.get("", response_model=DocumentListResponse)

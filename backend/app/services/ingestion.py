@@ -3,7 +3,10 @@
 Handles document upload, parsing, chunking, and indexing.
 """
 
+import asyncio
+import io
 import json
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import BinaryIO
@@ -27,6 +30,9 @@ from ..models import (
 from ..rag import create_chunker, get_vector_store
 
 logger = get_logger(__name__)
+
+# Thread pool for blocking I/O operations
+_executor = ThreadPoolExecutor(max_workers=4)
 
 
 class IngestionService:
@@ -60,8 +66,31 @@ class IngestionService:
                     "Loaded document registry",
                     document_count=len(self._documents),
                 )
+                # Clean up stale documents that were left processing
+                self._cleanup_stale_documents()
             except Exception as e:
                 logger.warning("Failed to load document registry", error=str(e))
+
+    def _cleanup_stale_documents(self) -> None:
+        """Mark documents stuck in PROCESSING or PENDING state as FAILED.
+
+        This handles cases where the server was restarted during processing.
+        """
+        stale_count = 0
+        for doc in self._documents.values():
+            if doc.status in (DocumentStatus.PROCESSING, DocumentStatus.PENDING):
+                doc.status = DocumentStatus.FAILED
+                doc.error_message = "Processing interrupted by server restart"
+                doc.updated_at = datetime.now(UTC)
+                stale_count += 1
+                logger.warning(
+                    "Marked stale document as failed",
+                    document_id=doc.document_id,
+                    previous_status=doc.status.value,
+                )
+        if stale_count > 0:
+            self._save_document_registry()
+            logger.info("Cleaned up stale documents", count=stale_count)
 
     def _save_document_registry(self) -> None:
         """Save document registry to disk."""
@@ -73,6 +102,151 @@ class IngestionService:
                 json.dump(data, f, indent=2)
         except Exception as e:
             logger.error("Failed to save document registry", error=str(e))
+
+    def create_document_record(
+        self,
+        filename: str,
+        metadata: dict[str, str] | None = None,
+    ) -> Document:
+        """Create a document record without processing.
+
+        This is the fast path for non-blocking uploads. The document
+        is created with PENDING status and returned immediately.
+
+        Args:
+            filename: Original filename
+            metadata: Optional custom metadata
+
+        Returns:
+            Document object with PENDING status
+
+        Raises:
+            UnsupportedDocumentTypeError: If file type is not supported
+        """
+        # Validate file type
+        file_ext = Path(filename).suffix.lower()
+        if file_ext not in self.SUPPORTED_TYPES:
+            raise UnsupportedDocumentTypeError(
+                file_ext,
+                list(self.SUPPORTED_TYPES.keys()),
+            )
+
+        doc_type = self.SUPPORTED_TYPES[file_ext]
+
+        # Create document record with PENDING status
+        doc_metadata = DocumentMetadata(
+            title=Path(filename).stem,
+            source_path=filename,
+            custom_metadata=metadata or {},
+        )
+
+        document = Document.create(
+            filename=filename,
+            document_type=doc_type,
+            metadata=doc_metadata,
+        )
+
+        # Document starts as PENDING
+        document.status = DocumentStatus.PENDING
+        self._documents[document.document_id] = document
+        self._save_document_registry()
+
+        logger.audit(
+            action="document_record_created",
+            resource_type="document",
+            resource_id=document.document_id,
+            filename=filename,
+            document_type=doc_type.value,
+        )
+
+        return document
+
+    async def process_document_background(
+        self,
+        document_id: str,
+        file_content: bytes,
+    ) -> None:
+        """Process a document in the background.
+
+        This handles the heavy lifting: parsing, chunking, and embedding.
+        Updates the document status to READY or FAILED when complete.
+
+        Args:
+            document_id: ID of the document to process
+            file_content: Raw file content as bytes
+        """
+        document = self._documents.get(document_id)
+        if not document:
+            logger.error("Document not found for background processing", document_id=document_id)
+            return
+
+        # Update status to PROCESSING
+        document.status = DocumentStatus.PROCESSING
+        document.updated_at = datetime.now(UTC)
+        self._save_document_registry()
+
+        logger.audit(
+            action="document_processing_started",
+            resource_type="document",
+            resource_id=document_id,
+        )
+
+        try:
+            # Run blocking I/O in executor to avoid blocking the event loop
+            loop = asyncio.get_event_loop()
+
+            # Parse document content (blocking I/O)
+            file_obj = io.BytesIO(file_content)
+            content = await loop.run_in_executor(
+                _executor,
+                self._parse_document,
+                file_obj,
+                document.document_type,
+            )
+            document.metadata.word_count = len(content.split())
+
+            # Chunk the document (CPU-bound but relatively fast)
+            chunks = self.chunker.chunk_document(
+                document_id=document.document_id,
+                content=content,
+                metadata={
+                    "title": document.metadata.title,
+                    "filename": document.filename,
+                    **(document.metadata.custom_metadata or {}),
+                },
+            )
+
+            # Add chunks to vector store (blocking I/O - embedding)
+            await loop.run_in_executor(
+                _executor,
+                self.vector_store.add_chunks,
+                chunks,
+            )
+
+            # Update document status to READY
+            document.chunk_count = len(chunks)
+            document.status = DocumentStatus.READY
+            document.updated_at = datetime.now(UTC)
+
+            logger.audit(
+                action="document_ingested",
+                resource_type="document",
+                resource_id=document_id,
+                chunk_count=len(chunks),
+            )
+
+        except Exception as e:
+            document.status = DocumentStatus.FAILED
+            document.error_message = str(e)
+            document.updated_at = datetime.now(UTC)
+            logger.error(
+                "Document background processing failed",
+                document_id=document_id,
+                error=str(e),
+            )
+
+        finally:
+            self._save_document_registry()
 
     async def ingest_document(
         self,

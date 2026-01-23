@@ -16,6 +16,7 @@ import {
   useDocuments,
   useDocumentChunks,
   useUploadDocument,
+  useDocumentPolling,
   useDeleteDocument,
   useGenerateDraft,
   useRegenerateSection,
@@ -51,8 +52,18 @@ function App() {
 
   // Document hooks
   const { data: documentsData, isLoading: isLoadingDocuments } = useDocuments();
-  const uploadMutation = useUploadDocument();
+  const { uploadedDocumentId, clearUploadedDocumentId, ...uploadMutation } = useUploadDocument();
   const deleteMutation = useDeleteDocument();
+
+  // Poll for document processing completion
+  const { data: polledDocument } = useDocumentPolling(uploadedDocumentId);
+
+  // Clear polling when document reaches terminal state
+  useEffect(() => {
+    if (polledDocument?.status === 'ready' || polledDocument?.status === 'failed') {
+      clearUploadedDocumentId();
+    }
+  }, [polledDocument?.status, clearUploadedDocumentId]);
 
   // Generation hooks
   const generateMutation = useGenerateDraft();

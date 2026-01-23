@@ -250,6 +250,7 @@
 .document-card__status--processing {
   background: #fef3c7;
   color: #92400e;
+  animation: pulse 1.5s ease-in-out infinite;
 }
 
 .document-card__status--failed {
@@ -260,6 +261,16 @@
 .document-card__status--pending {
   background: var(--color-bg-tertiary);
   color: var(--color-text-secondary);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
 }
 
 .document-card__actions {

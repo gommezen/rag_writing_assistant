@@ -6,6 +6,7 @@ export {
   useDeleteDocument,
   useDocument,
   useDocumentChunks,
+  useDocumentPolling,
   useDocuments,
   useUploadDocument,
 } from './useDocuments';
