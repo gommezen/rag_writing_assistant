@@ -7,7 +7,7 @@ Log operational metadata only.
 import logging
 import json
 import sys
-from datetime import datetime
+from datetime import datetime, UTC
 from typing import Any
 
 from ..config import get_settings
@@ -94,7 +94,7 @@ class AuditLogger:
             "action": action,
             "resource_type": resource_type,
             "resource_id": resource_id,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             **self._sanitize(kwargs),
         }
         self.logger.info(f"AUDIT: {action} on {resource_type}", extra={"audit": audit_data})
@@ -105,7 +105,7 @@ class JsonFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         log_data = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),

@@ -6,7 +6,7 @@ and factory fixtures for common test data.
 
 import hashlib
 import tempfile
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, BinaryIO
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -187,8 +187,8 @@ def sample_document(sample_document_metadata: DocumentMetadata) -> Document:
         status=DocumentStatus.READY,
         metadata=sample_document_metadata,
         chunk_count=15,
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow(),
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
     )
 
 
@@ -210,8 +210,8 @@ def sample_document_factory():
             status=status,
             metadata=DocumentMetadata(title=title),
             chunk_count=chunk_count,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
         )
     return _create
 
@@ -359,7 +359,7 @@ def sample_retrieval_metadata() -> RetrievalMetadata:
         chunks_retrieved=5,
         chunks_above_threshold=3,
         retrieval_time_ms=15.5,
-        timestamp=datetime.utcnow(),
+        timestamp=datetime.now(UTC),
     )
 
 

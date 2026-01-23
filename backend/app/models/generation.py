@@ -4,7 +4,7 @@ These models define the API contracts for generation endpoints.
 """
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -93,7 +93,12 @@ class GenerationRequest(BaseModel):
 class RegenerateSectionRequest(BaseModel):
     """Request to regenerate a specific section."""
     section_id: str = Field(..., description="ID of the section to regenerate")
-    prompt: str | None = Field(
+    original_content: str = Field(
+        ...,
+        min_length=1,
+        description="The original content of the section to regenerate",
+    )
+    refinement_prompt: str | None = Field(
         default=None,
         description="Optional refinement prompt for this section",
     )
@@ -139,7 +144,7 @@ class GenerationResult:
     total_sources_used: int
     generation_time_ms: float
     model_used: str
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     def to_response(self) -> GenerationResponse:
         """Convert to API response model."""

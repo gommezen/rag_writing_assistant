@@ -45,13 +45,18 @@ export function WarningBanner({ warnings, variant = 'caution' }: WarningBannerPr
 
 /**
  * Format warning messages for display.
- * Strips internal warning type prefixes and cleans up the message.
+ * Strips internal warning type prefixes (snake_case identifiers) and cleans up the message.
  */
 function formatWarning(warning: string): string {
   // Remove warning type prefix (e.g., "insufficient_context: ")
+  // Only strip if prefix looks like a snake_case identifier (letters, numbers, underscores)
   const colonIndex = warning.indexOf(':');
   if (colonIndex !== -1 && colonIndex < 30) {
-    return warning.slice(colonIndex + 1).trim();
+    const prefix = warning.slice(0, colonIndex);
+    // Check if prefix is a snake_case identifier (no spaces, only word chars and underscores)
+    if (/^[a-z][a-z0-9_]*$/i.test(prefix)) {
+      return warning.slice(colonIndex + 1).trim();
+    }
   }
   return warning;
 }

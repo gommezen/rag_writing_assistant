@@ -67,15 +67,10 @@ async def regenerate_section(request: RegenerateSectionRequest) -> RegenerateSec
     service = get_generation_service()
 
     try:
-        # For regeneration, we need the original content
-        # In a full implementation, we'd look this up from session state
-        # For MVP, the client should send the original content
-        original_content = request.prompt or "Previous content not available."
-
         result = await service.regenerate_section(
             section_id=request.section_id,
-            original_content=original_content,
-            refinement_prompt=request.prompt,
+            original_content=request.original_content,
+            refinement_prompt=request.refinement_prompt,
             document_ids=request.document_ids,
         )
 

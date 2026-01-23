@@ -4,7 +4,7 @@ Handles document upload, parsing, chunking, and indexing.
 """
 
 import json
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import BinaryIO
 
@@ -151,7 +151,7 @@ class IngestionService:
             # Update document status
             document.chunk_count = len(chunks)
             document.status = DocumentStatus.READY
-            document.updated_at = datetime.utcnow()
+            document.updated_at = datetime.now(UTC)
 
             logger.audit(
                 action="document_ingested",
@@ -163,7 +163,7 @@ class IngestionService:
         except Exception as e:
             document.status = DocumentStatus.FAILED
             document.error_message = str(e)
-            document.updated_at = datetime.utcnow()
+            document.updated_at = datetime.now(UTC)
             logger.error(
                 "Document ingestion failed",
                 document_id=document.document_id,

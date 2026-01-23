@@ -295,7 +295,8 @@ class TestRegenerateSection:
                                             "/api/generate/section",
                                             json={
                                                 "section_id": "section-001",
-                                                "prompt": "Make it more detailed",
+                                                "original_content": "Original section content to regenerate.",
+                                                "refinement_prompt": "Make it more detailed",
                                             }
                                         )
 

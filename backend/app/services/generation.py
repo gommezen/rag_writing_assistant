@@ -4,7 +4,7 @@ Uses retrieved context to generate grounded content with source citations.
 """
 
 import time
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from langchain_ollama import ChatOllama
@@ -132,7 +132,7 @@ class GenerationService:
             total_sources_used=len(set(s.document_id for s in sources)),
             generation_time_ms=generation_time_ms,
             model_used=self.settings.generation_model,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(UTC),
         )
 
         logger.audit(

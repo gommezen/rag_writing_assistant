@@ -101,10 +101,18 @@ function App() {
     async (sectionId: string) => {
       setRegeneratingSection(sectionId);
 
+      // Find the current section content
+      const currentSection = sections.find((s) => s.section_id === sectionId);
+      if (!currentSection) {
+        setRegeneratingSection(null);
+        return;
+      }
+
       try {
         const result = await regenerateMutation.mutateAsync({
           section_id: sectionId,
-          prompt: prompt,
+          original_content: currentSection.content,
+          refinement_prompt: prompt || undefined,
         });
 
         setSections((prev) =>
@@ -118,7 +126,7 @@ function App() {
         setRegeneratingSection(null);
       }
     },
-    [prompt, regenerateMutation]
+    [prompt, sections, regenerateMutation]
   );
 
   // Handle section accept (currently just marks as not edited)

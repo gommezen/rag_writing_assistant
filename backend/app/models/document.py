@@ -4,7 +4,7 @@ Models for document upload, storage, and chunk management.
 """
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 from uuid import uuid4
@@ -115,8 +115,8 @@ class Document:
     metadata: DocumentMetadata
     chunk_count: int = 0
     raw_content: str | None = None  # Only stored temporarily during processing
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    updated_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     error_message: str | None = None
 
     @classmethod

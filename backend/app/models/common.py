@@ -5,7 +5,7 @@ These models form the foundation for all services and ensure RAG metadata
 """
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
@@ -99,7 +99,7 @@ class RetrievalMetadata:
     chunks_retrieved: int
     chunks_above_threshold: int
     retrieval_time_ms: float
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     def to_dict(self) -> dict[str, Any]:
         return {

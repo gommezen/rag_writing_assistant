@@ -4,7 +4,7 @@ Provides similarity search with threshold filtering and metadata tracking.
 """
 
 import time
-from datetime import datetime
+from datetime import UTC, datetime
 
 from ..config import get_settings
 from ..core import get_logger
@@ -75,7 +75,7 @@ class RetrievalService:
             chunks_retrieved=len(results),
             chunks_above_threshold=len([r for r in results if r[1] >= threshold]),
             retrieval_time_ms=retrieval_time_ms,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(UTC),
         )
 
         logger.info(

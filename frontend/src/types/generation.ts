@@ -31,7 +31,8 @@ export interface GenerationResponse {
 
 export interface RegenerateSectionRequest {
   section_id: string;
-  prompt?: string;
+  original_content: string;
+  refinement_prompt?: string;
   document_ids?: string[];
 }
 

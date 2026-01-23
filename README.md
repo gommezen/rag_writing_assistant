@@ -14,12 +14,12 @@ A governance-first RAG (Retrieval-Augmented Generation) writing assistant. The s
 
 ### Benefits over plain LLM generation
 
-| Without RAG | With RAG |
-|-------------|----------|
-| LLM makes things up | LLM references your actual documents |
-| No sources shown | Every claim traceable to source |
-| Black box output | Confidence levels + warnings shown |
-| Generic content | Content derived from YOUR materials |
+| Without RAG                                      | With RAG                                          |
+| ------------------------------------------------ | ------------------------------------------------- |
+| Model may invent details when context is missing | Model grounds output in retrieved documents       |
+| No explicit source grounding                     | Claims can be traced to retrieved sources         |
+| Output confidence is implicit                    | Uncertainty and gaps can be surfaced explicitly   |
+| Generic phrasing based on training data          | Content derived from *your* materials and context |
 
 ## Architecture
 
