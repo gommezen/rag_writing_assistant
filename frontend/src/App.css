@@ -350,6 +350,19 @@
   box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
 }
 
+.prompt-section__textarea--highlighted,
+.prompt-section__textarea--highlighted:focus {
+  border-color: var(--color-success);
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.25);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+[data-theme="dark"] .prompt-section__textarea--highlighted,
+[data-theme="dark"] .prompt-section__textarea--highlighted:focus {
+  border-color: var(--color-success);
+  box-shadow: 0 0 12px rgba(52, 211, 153, 0.4);
+}
+
 .prompt-section__button {
   padding: var(--spacing-md) var(--spacing-lg);
   background: var(--color-primary);

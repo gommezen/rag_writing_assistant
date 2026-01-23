@@ -35,11 +35,13 @@ function App() {
   const [copied, setCopied] = useState(false);
   const [previewDocumentId, setPreviewDocumentId] = useState<string | null>(null);
   const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([]);
+  const [promptHighlighted, setPromptHighlighted] = useState(false);
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('theme');
     return saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const promptTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Apply theme to document
   useEffect(() => {
@@ -247,6 +249,10 @@ function App() {
   // Handle clicking on a suggested question
   const handleSuggestionClick = useCallback((question: string) => {
     setPrompt(question);
+    // Focus the textarea and show highlight
+    promptTextareaRef.current?.focus();
+    setPromptHighlighted(true);
+    setTimeout(() => setPromptHighlighted(false), 1500);
   }, []);
 
   return (
@@ -370,8 +376,9 @@ function App() {
             </label>
             <div className="prompt-section__input-group">
               <textarea
+                ref={promptTextareaRef}
                 id="prompt-input"
-                className="prompt-section__textarea"
+                className={`prompt-section__textarea${promptHighlighted ? ' prompt-section__textarea--highlighted' : ''}`}
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder="Enter your writing prompt here..."
