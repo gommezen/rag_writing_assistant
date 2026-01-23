@@ -18,8 +18,16 @@ from ..models import (
     GenerationResult,
     RegenerationResult,
     SourceReference,
+    SuggestedQuestionsResponse,
 )
-from ..rag import build_generation_prompt, build_regeneration_prompt, extract_citations, sanitize_citations
+from ..rag import (
+    build_generation_prompt,
+    build_regeneration_prompt,
+    build_suggested_questions_prompt,
+    extract_citations,
+    parse_questions,
+    sanitize_citations,
+)
 from .retrieval import get_retrieval_service
 from .validation import get_validation_service
 
@@ -237,6 +245,97 @@ class GenerationService:
         )
 
         return result
+
+    async def generate_suggestions(
+        self,
+        document_ids: list[str] | None = None,
+        num_questions: int = 5,
+    ) -> SuggestedQuestionsResponse:
+        """Generate suggested questions based on document content.
+
+        Args:
+            document_ids: Optional list of document IDs to use
+            num_questions: Number of questions to generate
+
+        Returns:
+            SuggestedQuestionsResponse with generated questions
+        """
+        start_time = time.time()
+
+        logger.audit(
+            action="suggestions_started",
+            resource_type="suggestions",
+            document_filter=document_ids,
+            num_questions=num_questions,
+        )
+
+        # Retrieve a sample of content from documents
+        # Use a generic query to get diverse chunks
+        sources, _ = self.retrieval_service.retrieve(
+            query="main topics and key information",
+            document_ids=document_ids,
+            top_k=10,  # Get more chunks for better question diversity
+        )
+
+        if not sources:
+            return SuggestedQuestionsResponse(
+                questions=["What topics would you like to explore? Upload documents to get started."],
+                source_documents=[],
+                generation_time_ms=(time.time() - start_time) * 1000,
+            )
+
+        # Build prompt with context
+        source_dicts = [
+            {
+                "content": self._get_source_content(source),
+                "metadata": source.metadata,
+            }
+            for source in sources
+        ]
+
+        system_prompt, user_prompt = build_suggested_questions_prompt(
+            sources=source_dicts,
+            num_questions=num_questions,
+        )
+
+        # Generate questions
+        try:
+            response = await self._generate_with_llm(system_prompt, user_prompt)
+        except Exception as e:
+            logger.error(
+                "Suggestions generation failed",
+                error=str(e),
+            )
+            raise LLMError(str(e), self.settings.generation_model)
+
+        # Parse questions from response
+        questions = parse_questions(response)
+
+        # If parsing failed, try to extract any lines that look like questions
+        if not questions:
+            questions = [
+                line.strip()
+                for line in response.strip().split("\n")
+                if line.strip() and line.strip().endswith("?")
+            ][:num_questions]
+
+        # Get unique document IDs used
+        source_document_ids = list(set(s.document_id for s in sources))
+
+        generation_time_ms = (time.time() - start_time) * 1000
+
+        logger.audit(
+            action="suggestions_completed",
+            resource_type="suggestions",
+            questions_count=len(questions),
+            generation_time_ms=generation_time_ms,
+        )
+
+        return SuggestedQuestionsResponse(
+            questions=questions,
+            source_documents=source_document_ids,
+            generation_time_ms=generation_time_ms,
+        )
 
     async def _generate_with_llm(
         self,

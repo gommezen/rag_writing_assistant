@@ -38,3 +38,17 @@ export interface UploadDocumentParams {
   title?: string;
   author?: string;
 }
+
+export interface ChunkResponse {
+  chunk_id: string;
+  chunk_index: number;
+  content: string;
+  page_number: number | null;
+  section_title: string | null;
+}
+
+export interface DocumentChunksResponse {
+  document_id: string;
+  chunks: ChunkResponse[];
+  total_chunks: number;
+}

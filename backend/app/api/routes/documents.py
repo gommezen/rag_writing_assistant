@@ -30,6 +30,22 @@ class DocumentListResponse(BaseModel):
     total: int
 
 
+class ChunkResponse(BaseModel):
+    """Response model for a document chunk."""
+    chunk_id: str
+    chunk_index: int
+    content: str
+    page_number: int | None = None
+    section_title: str | None = None
+
+
+class DocumentChunksResponse(BaseModel):
+    """Response model for document chunks."""
+    document_id: str
+    chunks: list[ChunkResponse]
+    total_chunks: int
+
+
 @router.post("", response_model=DocumentResponse)
 async def upload_document(
     file: UploadFile = File(..., description="Document file (PDF, DOCX, or TXT)"),
@@ -104,6 +120,37 @@ async def list_documents() -> DocumentListResponse:
             for doc in documents
         ],
         total=len(documents),
+    )
+
+
+@router.get("/{document_id}/chunks", response_model=DocumentChunksResponse)
+async def get_document_chunks(document_id: str) -> DocumentChunksResponse:
+    """Get all chunks for a document, ordered by chunk_index.
+
+    Returns the chunked content of a document for preview purposes.
+    """
+    service = get_ingestion_service()
+    document = service.get_document(document_id)
+
+    if document is None:
+        raise HTTPException(status_code=404, detail=f"Document not found: {document_id}")
+
+    # Get chunks from vector store
+    chunks = service.get_document_chunks(document_id)
+
+    return DocumentChunksResponse(
+        document_id=document_id,
+        chunks=[
+            ChunkResponse(
+                chunk_id=chunk.chunk_id,
+                chunk_index=chunk.chunk_index,
+                content=chunk.content,
+                page_number=chunk.page_number,
+                section_title=chunk.section_title,
+            )
+            for chunk in sorted(chunks, key=lambda c: c.chunk_index)
+        ],
+        total_chunks=len(chunks),
     )
 
 

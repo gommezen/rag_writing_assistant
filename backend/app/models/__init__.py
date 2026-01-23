@@ -25,6 +25,8 @@ from .generation import (
     RegenerationResult,
     RetrievalMetadataResponse,
     SourceReferenceResponse,
+    SuggestedQuestionsRequest,
+    SuggestedQuestionsResponse,
 )
 
 __all__ = [
@@ -51,4 +53,6 @@ __all__ = [
     "RegenerationResult",
     "RetrievalMetadataResponse",
     "SourceReferenceResponse",
+    "SuggestedQuestionsRequest",
+    "SuggestedQuestionsResponse",
 ]

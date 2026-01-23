@@ -6,8 +6,10 @@ from .prompts import (
     PromptTemplates,
     build_generation_prompt,
     build_regeneration_prompt,
+    build_suggested_questions_prompt,
     extract_citations,
     format_context,
+    parse_questions,
     sanitize_citations,
 )
 from .vectorstore import VectorStore, get_vector_store
@@ -23,8 +25,10 @@ __all__ = [
     "PromptTemplates",
     "build_generation_prompt",
     "build_regeneration_prompt",
+    "build_suggested_questions_prompt",
     "extract_citations",
     "format_context",
+    "parse_questions",
     "sanitize_citations",
     # Vector store
     "VectorStore",

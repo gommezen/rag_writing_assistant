@@ -5,8 +5,9 @@
 export {
   useDeleteDocument,
   useDocument,
+  useDocumentChunks,
   useDocuments,
   useUploadDocument,
 } from './useDocuments';
 
-export { useGenerateDraft, useRegenerateSection } from './useGeneration';
+export { useGenerateDraft, useRegenerateSection, useSuggestedQuestions } from './useGeneration';

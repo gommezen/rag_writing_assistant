@@ -50,3 +50,14 @@ export interface EditableSection extends GeneratedSection {
   original_content: string;
   has_unsaved_changes: boolean;
 }
+
+export interface SuggestedQuestionsRequest {
+  document_ids?: string[];
+  num_questions?: number;
+}
+
+export interface SuggestedQuestionsResponse {
+  questions: string[];
+  source_documents: string[];
+  generation_time_ms: number;
+}

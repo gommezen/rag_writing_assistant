@@ -5,11 +5,14 @@
 import type {
   ApiError,
   Document,
+  DocumentChunksResponse,
   DocumentListResponse,
   GenerationRequest,
   GenerationResponse,
   RegenerateSectionRequest,
   RegenerateSectionResponse,
+  SuggestedQuestionsRequest,
+  SuggestedQuestionsResponse,
   UploadDocumentParams,
 } from '../types';
 
@@ -78,6 +81,10 @@ class ApiClient {
     });
   }
 
+  async getDocumentChunks(documentId: string): Promise<DocumentChunksResponse> {
+    return this.request(`/documents/${documentId}/chunks`);
+  }
+
   // Generation operations
   async generateDraft(request: GenerationRequest): Promise<GenerationResponse> {
     return this.request('/generate', {
@@ -93,6 +100,18 @@ class ApiClient {
     request: RegenerateSectionRequest
   ): Promise<RegenerateSectionResponse> {
     return this.request('/generate/section', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(request),
+    });
+  }
+
+  async generateSuggestions(
+    request: SuggestedQuestionsRequest = {}
+  ): Promise<SuggestedQuestionsResponse> {
+    return this.request('/generate/suggestions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -62,6 +62,19 @@ CONTEXT:
 
 Rewritten section:"""
 
+    SUGGESTED_QUESTIONS_PROMPT = """Based on the following document content, generate {num_questions} thoughtful questions that a user might want to explore or write about.
+
+DOCUMENT CONTENT:
+{context}
+
+Generate questions that:
+1. Can be answered or explored using the provided content
+2. Cover different aspects and topics from the documents
+3. Range from specific factual questions to broader analytical ones
+4. Would help someone understand or work with this material better
+
+Output ONLY the questions, one per line, numbered 1-{num_questions}. Do not include any other text or explanations:"""
+
 
 def format_context(sources: list[dict]) -> tuple[str, int]:
     """Format retrieved sources into context string.
@@ -173,3 +186,54 @@ def sanitize_citations(text: str, max_source: int) -> str:
 
     pattern = r"\[Source (\d+)\]"
     return re.sub(pattern, replace_invalid, text)
+
+
+def build_suggested_questions_prompt(
+    sources: list[dict],
+    num_questions: int = 5,
+) -> tuple[str, str]:
+    """Build prompt for generating suggested questions.
+
+    Args:
+        sources: Retrieved source chunks
+        num_questions: Number of questions to generate
+
+    Returns:
+        Tuple of (system_prompt, user_prompt)
+    """
+    context, _ = format_context(sources)
+
+    system_prompt = """You are a helpful assistant that generates thoughtful questions based on document content.
+Your questions should help users explore and understand the material better."""
+
+    user_prompt = PromptTemplates.SUGGESTED_QUESTIONS_PROMPT.format(
+        context=context,
+        num_questions=num_questions,
+    )
+
+    return system_prompt, user_prompt
+
+
+def parse_questions(text: str) -> list[str]:
+    """Parse numbered questions from LLM output.
+
+    Args:
+        text: Raw LLM output with numbered questions
+
+    Returns:
+        List of question strings
+    """
+    import re
+
+    # Match lines starting with a number followed by . or )
+    pattern = r"^\s*\d+[\.\)]\s*(.+)$"
+    questions = []
+
+    for line in text.strip().split("\n"):
+        match = re.match(pattern, line.strip())
+        if match:
+            question = match.group(1).strip()
+            if question:
+                questions.append(question)
+
+    return questions

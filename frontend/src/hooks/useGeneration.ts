@@ -4,7 +4,7 @@
 
 import { useMutation } from '@tanstack/react-query';
 import { apiClient } from '../api/client';
-import type { GenerationRequest, RegenerateSectionRequest } from '../types';
+import type { GenerationRequest, RegenerateSectionRequest, SuggestedQuestionsRequest } from '../types';
 
 export function useGenerateDraft() {
   return useMutation({
@@ -16,5 +16,12 @@ export function useRegenerateSection() {
   return useMutation({
     mutationFn: (request: RegenerateSectionRequest) =>
       apiClient.regenerateSection(request),
+  });
+}
+
+export function useSuggestedQuestions() {
+  return useMutation({
+    mutationFn: (request: SuggestedQuestionsRequest = {}) =>
+      apiClient.generateSuggestions(request),
   });
 }

@@ -8,15 +8,18 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Sun, Moon, ChevronLeft, ChevronRight, Download } from 'lucide-react';
+import { Sun, Moon, ChevronLeft, ChevronRight, Download, Copy, Check, Eye, Lightbulb } from 'lucide-react';
 import { DocumentEditor } from './components/DocumentEditor';
+import { DocumentPreview } from './components/DocumentPreview';
 import { WarningBanner } from './components/WarningBanner';
 import {
   useDocuments,
+  useDocumentChunks,
   useUploadDocument,
   useDeleteDocument,
   useGenerateDraft,
   useRegenerateSection,
+  useSuggestedQuestions,
 } from './hooks';
 import type { GeneratedSection, Document } from './types';
 import './App.css';
@@ -29,6 +32,9 @@ function App() {
   const [isDragOver, setIsDragOver] = useState(false);
   const [acceptedSection, setAcceptedSection] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [previewDocumentId, setPreviewDocumentId] = useState<string | null>(null);
+  const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([]);
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('theme');
     return saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
@@ -49,6 +55,13 @@ function App() {
   // Generation hooks
   const generateMutation = useGenerateDraft();
   const regenerateMutation = useRegenerateSection();
+  const suggestionsMutation = useSuggestedQuestions();
+
+  // Document preview
+  const { data: chunksData, isLoading: isLoadingChunks } = useDocumentChunks(previewDocumentId);
+  const previewDocument = previewDocumentId
+    ? documentsData?.documents.find((d) => d.document_id === previewDocumentId)
+    : null;
 
   const documents = documentsData?.documents ?? [];
 
@@ -212,6 +225,30 @@ function App() {
     URL.revokeObjectURL(url);
   }, [sections]);
 
+  // Handle copy to clipboard
+  const handleCopy = useCallback(async () => {
+    if (sections.length === 0) return;
+    const content = sections.map((s) => s.content).join('\n\n');
+    await navigator.clipboard.writeText(content);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }, [sections]);
+
+  // Handle generating suggested questions
+  const handleGenerateSuggestions = useCallback(async () => {
+    try {
+      const result = await suggestionsMutation.mutateAsync({});
+      setSuggestedQuestions(result.questions);
+    } catch (error) {
+      console.error('Failed to generate suggestions:', error);
+    }
+  }, [suggestionsMutation]);
+
+  // Handle clicking on a suggested question
+  const handleSuggestionClick = useCallback((question: string) => {
+    setPrompt(question);
+  }, []);
+
   return (
     <div className="app">
       <header className="app__header">
@@ -281,11 +318,46 @@ function App() {
                     key={doc.document_id}
                     document={doc}
                     onDelete={() => handleDeleteDocument(doc.document_id)}
+                    onPreview={() => setPreviewDocumentId(doc.document_id)}
                     isDeleting={deleteMutation.isPending}
                   />
                 ))
               )}
             </div>
+
+            {/* Suggested Questions */}
+            {!sidebarCollapsed && documents.length > 0 && (
+              <div className="suggestions-section">
+                <div className="suggestions-section__header">
+                  <h3 className="suggestions-section__title">Suggested Questions</h3>
+                  <button
+                    type="button"
+                    className="suggestions-section__generate"
+                    onClick={handleGenerateSuggestions}
+                    disabled={suggestionsMutation.isPending}
+                    aria-label="Generate suggested questions"
+                  >
+                    <Lightbulb size={16} />
+                    {suggestionsMutation.isPending ? 'Generating...' : 'Generate'}
+                  </button>
+                </div>
+                {suggestedQuestions.length > 0 && (
+                  <ul className="suggestions-list">
+                    {suggestedQuestions.map((question, index) => (
+                      <li key={index} className="suggestions-list__item">
+                        <button
+                          type="button"
+                          className="suggestions-list__button"
+                          onClick={() => handleSuggestionClick(question)}
+                        >
+                          {question}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
           </section>
         </aside>
 
@@ -327,6 +399,15 @@ function App() {
               <div className="editor-section__header">
                 <button
                   type="button"
+                  className={`copy-btn ${copied ? 'copy-btn--copied' : ''}`}
+                  onClick={handleCopy}
+                  aria-label="Copy content to clipboard"
+                >
+                  {copied ? <Check size={16} /> : <Copy size={16} />}
+                  <span>{copied ? 'Copied!' : 'Copy'}</span>
+                </button>
+                <button
+                  type="button"
                   className="export-btn"
                   onClick={handleExport}
                   aria-label="Export content as text file"
@@ -347,6 +428,16 @@ function App() {
           </section>
         </main>
       </div>
+
+      {/* Document Preview Modal */}
+      {previewDocumentId && previewDocument && (
+        <DocumentPreview
+          documentTitle={previewDocument.metadata.title}
+          chunks={chunksData?.chunks ?? []}
+          isLoading={isLoadingChunks}
+          onClose={() => setPreviewDocumentId(null)}
+        />
+      )}
     </div>
   );
 }
@@ -354,10 +445,11 @@ function App() {
 interface DocumentCardProps {
   document: Document;
   onDelete: () => void;
+  onPreview: () => void;
   isDeleting: boolean;
 }
 
-function DocumentCard({ document, onDelete, isDeleting }: DocumentCardProps) {
+function DocumentCard({ document, onDelete, onPreview, isDeleting }: DocumentCardProps) {
   return (
     <article className="document-card">
       <div className="document-card__info">
@@ -371,15 +463,26 @@ function DocumentCard({ document, onDelete, isDeleting }: DocumentCardProps) {
           {document.status}
         </span>
       </div>
-      <button
-        type="button"
-        className="document-card__delete"
-        onClick={onDelete}
-        disabled={isDeleting}
-        aria-label={`Delete ${document.metadata.title}`}
-      >
-        Delete
-      </button>
+      <div className="document-card__actions">
+        <button
+          type="button"
+          className="document-card__preview"
+          onClick={onPreview}
+          disabled={document.status !== 'ready'}
+          aria-label={`Preview ${document.metadata.title}`}
+        >
+          <Eye size={14} />
+        </button>
+        <button
+          type="button"
+          className="document-card__delete"
+          onClick={onDelete}
+          disabled={isDeleting}
+          aria-label={`Delete ${document.metadata.title}`}
+        >
+          Delete
+        </button>
+      </div>
     </article>
   );
 }

@@ -44,3 +44,11 @@ export function useDeleteDocument() {
     },
   });
 }
+
+export function useDocumentChunks(documentId: string | null) {
+  return useQuery({
+    queryKey: [...DOCUMENTS_KEY, documentId, 'chunks'],
+    queryFn: () => apiClient.getDocumentChunks(documentId!),
+    enabled: !!documentId,
+  });
+}

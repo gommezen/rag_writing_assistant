@@ -231,6 +231,20 @@ class IngestionService:
         """Get a document by ID."""
         return self._documents.get(document_id)
 
+    def get_document_chunks(self, document_id: str) -> list[DocumentChunk]:
+        """Get all chunks for a document.
+
+        Args:
+            document_id: ID of the document
+
+        Returns:
+            List of chunks belonging to the document, sorted by chunk_index
+        """
+        return [
+            chunk for chunk in self.vector_store.chunks
+            if chunk.document_id == document_id
+        ]
+
     def list_documents(self) -> list[Document]:
         """List all documents."""
         return list(self._documents.values())

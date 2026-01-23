@@ -8,6 +8,8 @@ from ...models import (
     GenerationResponse,
     RegenerateSectionRequest,
     RegenerateSectionResponse,
+    SuggestedQuestionsRequest,
+    SuggestedQuestionsResponse,
 )
 from ...services import get_generation_service
 
@@ -75,6 +77,40 @@ async def regenerate_section(request: RegenerateSectionRequest) -> RegenerateSec
         )
 
         return result.to_response()
+
+    except LLMError as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"LLM service error: {e.message}. Ensure Ollama is running.",
+        )
+    except GenerationError as e:
+        raise HTTPException(status_code=500, detail=e.message)
+
+
+@router.post("/suggestions", response_model=SuggestedQuestionsResponse)
+async def generate_suggestions(
+    request: SuggestedQuestionsRequest,
+) -> SuggestedQuestionsResponse:
+    """Generate suggested questions based on uploaded documents.
+
+    This endpoint analyzes the content of uploaded documents and generates
+    thoughtful questions that users might want to explore or write about.
+
+    Args:
+        request: Request with optional document filter and number of questions
+
+    Returns:
+        List of suggested questions with metadata
+    """
+    service = get_generation_service()
+
+    try:
+        result = await service.generate_suggestions(
+            document_ids=request.document_ids,
+            num_questions=request.num_questions,
+        )
+
+        return result
 
     except LLMError as e:
         raise HTTPException(

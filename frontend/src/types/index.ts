@@ -10,7 +10,9 @@ export type {
 } from './common';
 
 export type {
+  ChunkResponse,
   Document,
+  DocumentChunksResponse,
   DocumentListResponse,
   DocumentMetadata,
   DocumentStatus,
@@ -25,4 +27,6 @@ export type {
   GenerationResponse,
   RegenerateSectionRequest,
   RegenerateSectionResponse,
+  SuggestedQuestionsRequest,
+  SuggestedQuestionsResponse,
 } from './generation';

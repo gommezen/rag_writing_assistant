@@ -262,6 +262,38 @@
   color: var(--color-text-secondary);
 }
 
+.document-card__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  align-items: flex-end;
+}
+
+.document-card__preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.document-card__preview:hover:not(:disabled) {
+  background: var(--color-bg-secondary);
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.document-card__preview:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .document-card__delete {
   font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
@@ -356,6 +388,7 @@
 .editor-section__header {
   display: flex;
   justify-content: flex-end;
+  gap: var(--spacing-sm);
   margin-bottom: var(--spacing-md);
 }
 
@@ -386,4 +419,133 @@
 
 [data-theme="dark"] .export-btn:hover {
   box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
+}
+
+/* Copy Button */
+.copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.copy-btn:hover {
+  background: var(--color-bg-secondary);
+  border-color: var(--color-primary);
+}
+
+.copy-btn:active {
+  transform: translateY(1px);
+}
+
+.copy-btn--copied {
+  background: var(--color-success, #22c55e);
+  border-color: var(--color-success, #22c55e);
+  color: white;
+}
+
+.copy-btn--copied:hover {
+  background: var(--color-success, #22c55e);
+  border-color: var(--color-success, #22c55e);
+}
+
+[data-theme="dark"] .copy-btn:hover {
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
+}
+
+[data-theme="dark"] .copy-btn--copied {
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.3);
+}
+
+/* Suggestions Section */
+.suggestions-section {
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-lg);
+  border-top: 1px solid var(--color-border);
+}
+
+.suggestions-section__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-sm);
+}
+
+.suggestions-section__title {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0;
+}
+
+.suggestions-section__generate {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.suggestions-section__generate:hover:not(:disabled) {
+  background: var(--color-bg-secondary);
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.suggestions-section__generate:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.suggestions-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.suggestions-list__item {
+  margin: 0;
+}
+
+.suggestions-list__button {
+  width: 100%;
+  text-align: left;
+  padding: var(--spacing-sm);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-size: var(--font-size-xs);
+  line-height: 1.4;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.suggestions-list__button:hover {
+  background: var(--color-bg-tertiary);
+  border-color: var(--color-primary);
+}
+
+[data-theme="dark"] .suggestions-list__button:hover {
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.15);
 }

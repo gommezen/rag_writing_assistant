@@ -132,6 +132,31 @@ class RegenerateSectionResponse(BaseModel):
     model_config = {"extra": "forbid"}
 
 
+class SuggestedQuestionsRequest(BaseModel):
+    """Request to generate suggested questions based on documents."""
+    document_ids: list[str] | None = Field(
+        default=None,
+        description="Specific documents to use. If None, uses all documents.",
+    )
+    num_questions: int = Field(
+        default=5,
+        ge=1,
+        le=10,
+        description="Number of questions to generate",
+    )
+
+    model_config = {"extra": "forbid"}
+
+
+class SuggestedQuestionsResponse(BaseModel):
+    """Response containing suggested questions."""
+    questions: list[str]
+    source_documents: list[str]  # Document IDs that were used
+    generation_time_ms: float
+
+    model_config = {"extra": "forbid"}
+
+
 # Internal dataclasses for service layer
 
 
