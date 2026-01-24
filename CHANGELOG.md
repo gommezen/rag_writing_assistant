@@ -2,6 +2,69 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.0] - 2026-01-24
+
+### Added
+
+#### Document Intelligence System
+- **Intent Detection Service**: Automatically classifies queries as ANALYSIS, QA, or WRITING based on pattern matching
+  - ANALYSIS: "summarize", "overview", "main points", "key takeaways"
+  - QA: Questions starting with what/when/where/who/why/how
+  - WRITING: "write", "draft", "create", "compose" (default for ambiguous queries)
+
+- **Diverse Retrieval Service**: Region-based sampling for analysis mode
+  - Samples from intro (30%), middle (40%), and conclusion (30%) regions
+  - Provides representative coverage across entire document
+  - Target: ~30 chunks per document
+
+- **Coverage Descriptor**: Tracks what portion of documents the system has seen
+  - `chunks_seen` / `chunks_total` with percentage
+  - `regions_covered` and `regions_missing`
+  - `blind_spots` list for transparency
+  - `coverage_summary` injected into prompts
+
+- **Summary Scope Detection**: Distinguishes broad from focused summaries
+  - BROAD: "Summarize this document" → exploratory overview + suggested focus areas
+  - FOCUSED: "Summarize the ethics section" → deep synthesis on specific topic
+  - Enables escalation flow: broad overview → user picks focus → deep dive
+
+- **Epistemic Guardrails in Prompts**:
+  - Coverage-aware system prompts ("You are seeing ~12% of the document...")
+  - Claim-evidence separation (Observations vs Synthesized Patterns)
+  - Contradiction awareness (present both views without forcing resolution)
+  - Blind spots section (what couldn't be assessed)
+  - Questions raised section (intellectual honesty)
+
+#### New Prompt Templates
+- `ANALYSIS_SYSTEM_PROMPT`: Epistemic rules for document analysis
+- `ANALYSIS_PROMPT`: Structured output with 5 sections
+- `EXPLORATORY_SUMMARY_PROMPT`: Overview + suggested focus areas
+- `FOCUSED_SUMMARY_PROMPT`: Deep synthesis on specific topic
+- `COVERAGE_AWARE_GENERATION_PROMPT`: Writing/QA with coverage context
+
+#### New Models
+- `QueryIntent` enum (ANALYSIS, QA, WRITING)
+- `RetrievalType` enum (SIMILARITY, DIVERSE)
+- `DocumentRegion` enum (INTRO, MIDDLE, CONCLUSION)
+- `SummaryScope` enum (BROAD, FOCUSED, NOT_APPLICABLE)
+- `DocumentCoverage` dataclass
+- `CoverageDescriptor` dataclass
+- `IntentClassification` dataclass
+
+#### Tests
+- 62 new tests for intent detection and summary scope
+- Tests for diverse retrieval and coverage computation
+
+### Changed
+
+#### Backend
+- Generation service now detects intent and routes to appropriate retrieval strategy
+- Analysis queries use diverse sampling; writing/QA use similarity search
+- Prompts include coverage context so LLM knows its limitations
+- `RetrievalMetadata` extended with `coverage` and `intent` fields
+
+---
+
 ## [0.1.2] - 2026-01-24
 
 ### Added
