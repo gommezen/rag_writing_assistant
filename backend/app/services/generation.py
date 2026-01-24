@@ -23,10 +23,13 @@ from ..models import (
     RetrievalType,
     SourceReference,
     SuggestedQuestionsResponse,
+    SummaryScope,
 )
 from ..rag import (
     build_analysis_prompt,
     build_coverage_aware_generation_prompt,
+    build_exploratory_summary_prompt,
+    build_focused_summary_prompt,
     build_generation_prompt,
     build_regeneration_prompt,
     build_suggested_questions_prompt,
@@ -114,6 +117,8 @@ class GenerationService:
             document_filter=document_ids,
             detected_intent=intent.intent.value,
             retrieval_type=retrieval_type.value,
+            summary_scope=intent.summary_scope.value,
+            focus_topic=intent.focus_topic,
         )
 
         # Step 3: Retrieve context based on strategy
@@ -153,12 +158,22 @@ class GenerationService:
             for source in sources
         ]
 
-        # Step 4: Choose prompt based on intent
+        # Step 4: Choose prompt based on intent and summary scope
         if intent.intent == QueryIntent.ANALYSIS:
-            system_prompt, user_prompt = build_analysis_prompt(
-                sources=source_dicts,
-                coverage_summary=coverage.coverage_summary,
-            )
+            # For ANALYSIS intent, use summary scope to select prompt
+            if intent.summary_scope == SummaryScope.FOCUSED and intent.focus_topic:
+                # Focused summary: deep synthesis on specific topic
+                system_prompt, user_prompt = build_focused_summary_prompt(
+                    focus_topic=intent.focus_topic,
+                    sources=source_dicts,
+                    coverage_summary=coverage.coverage_summary,
+                )
+            else:
+                # Broad summary: exploratory overview with suggested focus areas
+                system_prompt, user_prompt = build_exploratory_summary_prompt(
+                    sources=source_dicts,
+                    coverage_summary=coverage.coverage_summary,
+                )
         else:
             # For QA and WRITING, use coverage-aware generation prompt
             system_prompt, user_prompt = build_coverage_aware_generation_prompt(

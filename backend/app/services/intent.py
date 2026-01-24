@@ -10,9 +10,28 @@ import re
 from dataclasses import dataclass
 
 from ..core import get_logger
-from ..models import IntentClassification, QueryIntent, RetrievalType
+from ..models import IntentClassification, QueryIntent, RetrievalType, SummaryScope
 
 logger = get_logger(__name__)
+
+
+# Patterns to detect focused (topic-scoped) summaries
+# These indicate the user wants a deep dive on a specific topic
+# Each pattern should capture the TOPIC, not the verb
+FOCUSED_SUMMARY_PATTERNS = [
+    # "Summarize X in this document" - capture X (non-greedy, before "in/from")
+    r"\b(?:summarize|summary|summarise)\s+(?:the\s+)?(.+?)\s+(?:in|from)\s+(?:this|the)\s+document",
+    # "Summarize the X section/chapter/part" - capture X section
+    r"\b(?:summarize|summary|summarise)\s+((?:the\s+)?.+?(?:section|chapter|part))",
+    # "What does it say about X" - capture X (everything after "about")
+    r"\bwhat\s+does\s+(?:it|the\s+document)\s+say\s+about\s+(.+?)(?:\?|$)",
+    # "Go deeper on X" / "More detail on X" - capture X
+    r"\b(?:go\s+deeper|more\s+detail|elaborate|expand)\s+(?:on|about)\s+(.+?)(?:\?|$)",
+    # "Focus on X" - capture X
+    r"\bfocus\s+(?:on|about)\s+(.+?)(?:\?|$)",
+    # "Analyze the X in/from" (specific topic) - capture X
+    r"\b(?:analyze|analyse)\s+(?:the\s+)?(.+?)\s+(?:in|from)\s+",
+]
 
 
 @dataclass
@@ -37,6 +56,10 @@ ANALYSIS_PATTERNS = IntentPattern(
         r"\b(analyze|analyse|analysis)\b",
         r"\b(themes?|patterns?)\s+(in|from|across)\b",
         r"\b(extract|identify)\s+(key|main|important|ideas?)\b",
+        # Focused summary triggers (escalation phrases)
+        r"\b(go\s+deeper|more\s+detail|elaborate|expand)\s+on\b",
+        r"\b(focus\s+on)\b",
+        r"\bwhat\s+does\s+(it|the\s+document)\s+say\s+about\b",
     ],
     intent=QueryIntent.ANALYSIS,
     retrieval_type=RetrievalType.DIVERSE,
@@ -80,10 +103,65 @@ class IntentService:
             (ANALYSIS_PATTERNS, self._compile_patterns(ANALYSIS_PATTERNS)),
             (QA_PATTERNS, self._compile_patterns(QA_PATTERNS)),
         ]
+        # Compile focused summary patterns
+        self._focused_patterns = [
+            re.compile(p, re.IGNORECASE) for p in FOCUSED_SUMMARY_PATTERNS
+        ]
 
     def _compile_patterns(self, pattern_group: IntentPattern) -> list[re.Pattern]:
         """Compile regex patterns for faster matching."""
         return [re.compile(p, re.IGNORECASE) for p in pattern_group.patterns]
+
+    def _detect_summary_scope(self, query: str) -> tuple[SummaryScope, str | None]:
+        """Detect whether a summary request is broad or focused.
+
+        Args:
+            query: The user's query text
+
+        Returns:
+            Tuple of (SummaryScope, focus_topic or None)
+        """
+        query_lower = query.lower().strip()
+
+        # Check for focused summary patterns
+        for pattern in self._focused_patterns:
+            match = pattern.search(query_lower)
+            if match:
+                # Extract the focus topic from the capture group
+                groups = match.groups()
+                # Find the first non-empty group that looks like a topic
+                focus_topic = None
+                for group in groups:
+                    if group and len(group) > 2 and group not in ("the", "this", "a"):
+                        focus_topic = group.strip()
+                        break
+
+                if focus_topic:
+                    logger.info(
+                        "Focused summary detected",
+                        focus_topic=focus_topic,
+                        query_preview=query[:50],
+                    )
+                    return SummaryScope.FOCUSED, focus_topic
+
+        # Check if it's a broad summary (general summarization without specific topic)
+        broad_patterns = [
+            r"\b(summarize|summary|summarise)\s+(this|the)\s+(document|file|text|content)s?\b",
+            r"\b(give|provide)\s+(me\s+)?(a|an)?\s*(summary|overview)\b",
+            r"\b(what\s+are\s+the\s+main|key)\s+(points?|takeaways?|themes?)\b",
+            r"\boverview\s+of\s+(this|the)\s+(document|file)\b",
+        ]
+
+        for pattern_str in broad_patterns:
+            if re.search(pattern_str, query_lower):
+                logger.info(
+                    "Broad summary detected",
+                    query_preview=query[:50],
+                )
+                return SummaryScope.BROAD, None
+
+        # Default: if analysis intent but no clear scope, treat as broad
+        return SummaryScope.BROAD, None
 
     def detect_intent(self, query: str) -> IntentClassification:
         """Detect the intent of a user query.
@@ -119,6 +197,8 @@ class IntentService:
                 confidence=0.5,
                 reasoning="No specific patterns matched; defaulting to writing mode",
                 suggested_retrieval=RetrievalType.SIMILARITY,
+                summary_scope=SummaryScope.NOT_APPLICABLE,
+                focus_topic=None,
             )
 
         # Sort by match count (more matches = higher confidence)
@@ -132,11 +212,25 @@ class IntentService:
         # Build reasoning
         reasoning = self._build_reasoning(query, pattern_group, match_count)
 
+        # Determine summary scope for ANALYSIS intent
+        summary_scope = SummaryScope.NOT_APPLICABLE
+        focus_topic = None
+
+        if pattern_group.intent == QueryIntent.ANALYSIS:
+            summary_scope, focus_topic = self._detect_summary_scope(query)
+            # Add scope info to reasoning
+            if summary_scope == SummaryScope.FOCUSED and focus_topic:
+                reasoning += f" (focused on: {focus_topic})"
+            elif summary_scope == SummaryScope.BROAD:
+                reasoning += " (broad exploratory summary)"
+
         logger.info(
             "Intent detected",
             intent=pattern_group.intent.value,
             confidence=round(base_confidence, 2),
             match_count=match_count,
+            summary_scope=summary_scope.value,
+            focus_topic=focus_topic,
             query_preview=query[:50],
         )
 
@@ -145,6 +239,8 @@ class IntentService:
             confidence=base_confidence,
             reasoning=reasoning,
             suggested_retrieval=pattern_group.retrieval_type,
+            summary_scope=summary_scope,
+            focus_topic=focus_topic,
         )
 
     def _build_reasoning(

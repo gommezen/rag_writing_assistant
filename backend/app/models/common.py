@@ -41,6 +41,17 @@ class QueryIntent(str, Enum):
     WRITING = "writing"
 
 
+class SummaryScope(str, Enum):
+    """Scope of summary requests.
+
+    BROAD: "Summarize this document" → exploratory overview + suggested questions
+    FOCUSED: "Summarize X in this document" → deep synthesis on specific topic
+    """
+    BROAD = "broad"
+    FOCUSED = "focused"
+    NOT_APPLICABLE = "not_applicable"  # For non-analysis intents
+
+
 @dataclass
 class SourceReference:
     """Reference to a source chunk used in generation.
@@ -163,19 +174,26 @@ class IntentClassification:
     """Classification of user query intent.
 
     Determines which retrieval strategy to use.
+    For ANALYSIS intent, also determines summary scope (broad vs focused).
     """
     intent: QueryIntent
     confidence: float
     reasoning: str
     suggested_retrieval: RetrievalType
+    summary_scope: SummaryScope = SummaryScope.NOT_APPLICABLE
+    focus_topic: str | None = None  # Extracted topic for focused summaries
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        result = {
             "intent": self.intent.value,
             "confidence": round(self.confidence, 2),
             "reasoning": self.reasoning,
             "suggested_retrieval": self.suggested_retrieval.value,
+            "summary_scope": self.summary_scope.value,
         }
+        if self.focus_topic:
+            result["focus_topic"] = self.focus_topic
+        return result
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "IntentClassification":
@@ -184,6 +202,8 @@ class IntentClassification:
             confidence=data["confidence"],
             reasoning=data["reasoning"],
             suggested_retrieval=RetrievalType(data["suggested_retrieval"]),
+            summary_scope=SummaryScope(data.get("summary_scope", "not_applicable")),
+            focus_topic=data.get("focus_topic"),
         )
 
 

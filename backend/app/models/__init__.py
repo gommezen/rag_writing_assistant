@@ -11,6 +11,7 @@ from .common import (
     RetrievalMetadata,
     RetrievalType,
     SourceReference,
+    SummaryScope,
     WarningType,
 )
 from .document import (
@@ -50,6 +51,7 @@ __all__ = [
     "RetrievalMetadata",
     "RetrievalType",
     "SourceReference",
+    "SummaryScope",
     "WarningType",
     # Document
     "ChunkingConfig",
