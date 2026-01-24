@@ -19,6 +19,7 @@ from .common import (
     RetrievalMetadata,
     RetrievalType,
     SourceReference,
+    SummaryScope,
 )
 
 
@@ -116,6 +117,8 @@ class IntentClassificationResponse(BaseModel):
     confidence: float
     reasoning: str
     suggested_retrieval: str
+    summary_scope: str = "not_applicable"
+    focus_topic: str | None = None
 
     @classmethod
     def from_dataclass(cls, intent: IntentClassification) -> "IntentClassificationResponse":
@@ -124,6 +127,8 @@ class IntentClassificationResponse(BaseModel):
             confidence=round(intent.confidence, 2),
             reasoning=intent.reasoning,
             suggested_retrieval=intent.suggested_retrieval.value,
+            summary_scope=intent.summary_scope.value,
+            focus_topic=intent.focus_topic,
         )
 
 

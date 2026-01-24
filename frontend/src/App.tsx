@@ -22,12 +22,13 @@ import {
   useRegenerateSection,
   useSuggestedQuestions,
 } from './hooks';
-import type { GeneratedSection, Document } from './types';
+import type { GeneratedSection, Document, RetrievalMetadata } from './types';
 import './App.css';
 
 function App() {
   const [prompt, setPrompt] = useState('');
   const [sections, setSections] = useState<GeneratedSection[]>([]);
+  const [retrievalMetadata, setRetrievalMetadata] = useState<RetrievalMetadata | null>(null);
   const [globalWarnings, setGlobalWarnings] = useState<string[]>([]);
   const [regeneratingSection, setRegeneratingSection] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -147,12 +148,16 @@ function App() {
   );
 
   // Handle generation
-  const handleGenerate = useCallback(async () => {
+  const handleGenerate = useCallback(async (escalateCoverage = false) => {
     if (!prompt.trim()) return;
 
     try {
-      const result = await generateMutation.mutateAsync({ prompt });
+      const result = await generateMutation.mutateAsync({
+        prompt,
+        escalate_coverage: escalateCoverage,
+      });
       setSections(result.sections);
+      setRetrievalMetadata(result.retrieval_metadata);
 
       // Collect global warnings from retrieval
       const warnings: string[] = [];
@@ -165,6 +170,11 @@ function App() {
       setGlobalWarnings([`Generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`]);
     }
   }, [prompt, generateMutation]);
+
+  // Handle expand coverage
+  const handleExpandCoverage = useCallback(() => {
+    handleGenerate(true);
+  }, [handleGenerate]);
 
   // Handle section content change
   const handleSectionChange = useCallback((sectionId: string, content: string) => {
@@ -398,7 +408,7 @@ function App() {
               <button
                 type="button"
                 className="prompt-section__button"
-                onClick={handleGenerate}
+                onClick={() => handleGenerate(false)}
                 disabled={!prompt.trim() || generateMutation.isPending}
               >
                 {generateMutation.isPending ? 'Generating...' : 'Generate Draft'}
@@ -409,6 +419,15 @@ function App() {
           {/* Global Warnings */}
           {globalWarnings.length > 0 && (
             <WarningBanner warnings={globalWarnings} />
+          )}
+
+          {/* Coverage Stats */}
+          {retrievalMetadata?.coverage && (
+            <CoverageStats
+              metadata={retrievalMetadata}
+              onExpandCoverage={handleExpandCoverage}
+              isExpanding={generateMutation.isPending}
+            />
           )}
 
           {/* Document Editor */}
@@ -502,6 +521,74 @@ function DocumentCard({ document, onDelete, onPreview, isDeleting }: DocumentCar
         </button>
       </div>
     </article>
+  );
+}
+
+interface CoverageStatsProps {
+  metadata: RetrievalMetadata;
+  onExpandCoverage: () => void;
+  isExpanding: boolean;
+}
+
+function CoverageStats({ metadata, onExpandCoverage, isExpanding }: CoverageStatsProps) {
+  const coverage = metadata.coverage;
+  const intent = metadata.intent;
+
+  if (!coverage) return null;
+
+  const coverageLevel =
+    coverage.coverage_percentage >= 40
+      ? 'high'
+      : coverage.coverage_percentage >= 20
+      ? 'medium'
+      : 'low';
+
+  // Show expand button only if coverage is below 50% and using diverse retrieval
+  const canExpand = coverage.coverage_percentage < 50 && metadata.retrieval_type === 'diverse';
+
+  return (
+    <div className={`coverage-stats coverage-stats--${coverageLevel}`}>
+      <div className="coverage-stats__header">
+        <span className="coverage-stats__title">Document Coverage</span>
+        {intent && (
+          <span className="coverage-stats__intent">
+            {intent.intent.toUpperCase()} mode
+          </span>
+        )}
+      </div>
+      <div className="coverage-stats__body">
+        <div className="coverage-stats__percentage">
+          <span className="coverage-stats__number">{coverage.coverage_percentage.toFixed(0)}%</span>
+          <span className="coverage-stats__label">coverage</span>
+        </div>
+        <div className="coverage-stats__details">
+          <span>{coverage.chunks_seen} of {coverage.chunks_total} chunks analyzed</span>
+          {metadata.retrieval_type && (
+            <span className="coverage-stats__type">{metadata.retrieval_type} retrieval</span>
+          )}
+          {canExpand && (
+            <button
+              type="button"
+              className="coverage-stats__expand"
+              onClick={onExpandCoverage}
+              disabled={isExpanding}
+            >
+              {isExpanding ? 'Expanding...' : '↑ Expand to ~50%'}
+            </button>
+          )}
+        </div>
+      </div>
+      {coverage.blind_spots.length > 0 && (
+        <div className="coverage-stats__blind-spots">
+          <span className="coverage-stats__blind-spots-title">Blind spots:</span>
+          <ul>
+            {coverage.blind_spots.slice(0, 3).map((spot, i) => (
+              <li key={i}>{spot}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
   );
 }
 

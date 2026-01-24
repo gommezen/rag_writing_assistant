@@ -53,7 +53,8 @@ class DiverseRetrievalService:
     def retrieve_diverse(
         self,
         document_ids: list[str] | None = None,
-        target_chunks: int = 30,
+        target_chunks: int | None = None,
+        target_coverage_pct: float | None = None,
         escalate: bool = False,
     ) -> tuple[list[SourceReference], RetrievalMetadata, CoverageDescriptor]:
         """Retrieve diverse samples from documents.
@@ -63,20 +64,39 @@ class DiverseRetrievalService:
 
         Args:
             document_ids: Optional filter by document IDs
-            target_chunks: Target number of chunks to retrieve
-            escalate: If True, increase sampling for more coverage
+            target_chunks: Target number of chunks (overrides target_coverage_pct if set)
+            target_coverage_pct: Target coverage percentage (uses config default if None)
+            escalate: If True, increase sampling for more coverage (adds 15%)
 
         Returns:
             Tuple of (sources, retrieval_metadata, coverage_descriptor)
         """
         start_time = time.time()
 
-        # Escalation increases target chunks
-        if escalate:
-            target_chunks = min(target_chunks * 2, 60)
+        # Use config defaults if not specified
+        if target_coverage_pct is None:
+            target_coverage_pct = self.settings.default_coverage_pct
 
-        # Get all chunks, optionally filtered by document
+        # Get total chunks first to calculate target
         all_chunks = self._get_filtered_chunks(document_ids)
+        total_chunks = len(all_chunks)
+
+        # Calculate target chunks from coverage percentage
+        if target_chunks is None:
+            target_chunks = max(10, int(total_chunks * target_coverage_pct / 100))
+
+        # Escalation increases coverage by 15 percentage points
+        if escalate:
+            escalated_pct = min(target_coverage_pct + 15, self.settings.max_coverage_pct)
+            target_chunks = max(target_chunks, int(total_chunks * escalated_pct / 100))
+
+        logger.info(
+            "Diverse retrieval starting",
+            total_chunks=total_chunks,
+            target_chunks=target_chunks,
+            target_coverage_pct=target_coverage_pct,
+            escalate=escalate,
+        )
 
         if not all_chunks:
             coverage = self._build_empty_coverage()

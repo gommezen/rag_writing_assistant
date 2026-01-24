@@ -23,10 +23,13 @@ from ..models import (
     RetrievalType,
     SourceReference,
     SuggestedQuestionsResponse,
+    SummaryScope,
 )
 from ..rag import (
     build_analysis_prompt,
     build_coverage_aware_generation_prompt,
+    build_exploratory_summary_prompt,
+    build_focused_summary_prompt,
     build_generation_prompt,
     build_regeneration_prompt,
     build_suggested_questions_prompt,
@@ -52,18 +55,45 @@ class GenerationService:
         self.diverse_retrieval_service = get_diverse_retrieval_service()
         self.intent_service = get_intent_service()
         self.validation_service = get_validation_service()
-        self._llm: ChatOllama | None = None
+        self._llm_cache: dict[str, ChatOllama] = {}
+
+    def _get_llm_for_intent(self, intent: QueryIntent | None = None) -> tuple[ChatOllama, str]:
+        """Get the appropriate LLM based on query intent.
+
+        Args:
+            intent: The detected query intent (ANALYSIS, QA, WRITING)
+
+        Returns:
+            Tuple of (ChatOllama instance, model name used)
+        """
+        model_map = {
+            QueryIntent.ANALYSIS: self.settings.analysis_model,
+            QueryIntent.QA: self.settings.qa_model,
+            QueryIntent.WRITING: self.settings.writing_model,
+        }
+        model = model_map.get(intent, self.settings.generation_model) if intent else self.settings.generation_model
+
+        # Cache LLM instances by model name
+        if model not in self._llm_cache:
+            self._llm_cache[model] = ChatOllama(
+                model=model,
+                base_url=self.settings.ollama_base_url,
+                temperature=0.7,
+                num_ctx=self.settings.ollama_num_ctx,
+            )
+            logger.info(
+                "Created LLM instance",
+                model=model,
+                num_ctx=self.settings.ollama_num_ctx,
+            )
+
+        return self._llm_cache[model], model
 
     @property
     def llm(self) -> ChatOllama:
-        """Lazy-load LLM client."""
-        if self._llm is None:
-            self._llm = ChatOllama(
-                model=self.settings.generation_model,
-                base_url=self.settings.ollama_base_url,
-                temperature=0.7,
-            )
-        return self._llm
+        """Lazy-load default LLM client (for backward compatibility)."""
+        llm, _ = self._get_llm_for_intent(None)
+        return llm
 
     async def generate(
         self,
@@ -114,13 +144,15 @@ class GenerationService:
             document_filter=document_ids,
             detected_intent=intent.intent.value,
             retrieval_type=retrieval_type.value,
+            summary_scope=intent.summary_scope.value,
+            focus_topic=intent.focus_topic,
         )
 
         # Step 3: Retrieve context based on strategy
         if retrieval_type == RetrievalType.DIVERSE:
             sources, retrieval_metadata, coverage = self.diverse_retrieval_service.retrieve_diverse(
                 document_ids=document_ids,
-                target_chunks=30,
+                # Uses settings.default_coverage_pct (35% by default)
                 escalate=escalate_coverage,
             )
             retrieval_metadata.intent = intent
@@ -153,12 +185,22 @@ class GenerationService:
             for source in sources
         ]
 
-        # Step 4: Choose prompt based on intent
+        # Step 4: Choose prompt based on intent and summary scope
         if intent.intent == QueryIntent.ANALYSIS:
-            system_prompt, user_prompt = build_analysis_prompt(
-                sources=source_dicts,
-                coverage_summary=coverage.coverage_summary,
-            )
+            # For ANALYSIS intent, use summary scope to select prompt
+            if intent.summary_scope == SummaryScope.FOCUSED and intent.focus_topic:
+                # Focused summary: deep synthesis on specific topic
+                system_prompt, user_prompt = build_focused_summary_prompt(
+                    focus_topic=intent.focus_topic,
+                    sources=source_dicts,
+                    coverage_summary=coverage.coverage_summary,
+                )
+            else:
+                # Broad summary: exploratory overview with suggested focus areas
+                system_prompt, user_prompt = build_exploratory_summary_prompt(
+                    sources=source_dicts,
+                    coverage_summary=coverage.coverage_summary,
+                )
         else:
             # For QA and WRITING, use coverage-aware generation prompt
             system_prompt, user_prompt = build_coverage_aware_generation_prompt(
@@ -167,16 +209,20 @@ class GenerationService:
                 coverage_summary=coverage.coverage_summary,
             )
 
-        # Generate content
+        # Generate content using intent-specific model
         try:
-            response = await self._generate_with_llm(system_prompt, user_prompt)
+            response, model_used = await self._generate_with_llm(
+                system_prompt, user_prompt, intent=intent.intent
+            )
         except Exception as e:
+            _, fallback_model = self._get_llm_for_intent(intent.intent)
             logger.error(
                 "LLM generation failed",
                 generation_id=generation_id,
+                model=fallback_model,
                 error=str(e),
             )
-            raise LLMError(str(e), self.settings.generation_model)
+            raise LLMError(str(e), fallback_model)
 
         # Sanitize citations - remove any that reference non-existent sources
         response = sanitize_citations(response, len(sources))
@@ -211,7 +257,7 @@ class GenerationService:
             retrieval_metadata=retrieval_metadata,
             total_sources_used=len(set(s.document_id for s in sources)),
             generation_time_ms=generation_time_ms,
-            model_used=self.settings.generation_model,
+            model_used=model_used,
             created_at=datetime.now(UTC),
         )
 
@@ -223,6 +269,7 @@ class GenerationService:
             sources_used=result.total_sources_used,
             generation_time_ms=generation_time_ms,
             intent=intent.intent.value,
+            model_used=model_used,
             coverage_percentage=round(coverage.coverage_percentage, 1),
         )
 
@@ -305,11 +352,13 @@ class GenerationService:
             refinement_instructions=refinement_prompt,
         )
 
-        # Generate new content
+        # Generate new content (use WRITING intent for regeneration)
         try:
-            response = await self._generate_with_llm(system_prompt, user_prompt)
+            response, model_used = await self._generate_with_llm(
+                system_prompt, user_prompt, intent=QueryIntent.WRITING
+            )
         except Exception as e:
-            raise LLMError(str(e), self.settings.generation_model)
+            raise LLMError(str(e), self.settings.writing_model)
 
         # Sanitize citations - remove any that reference non-existent sources
         response = sanitize_citations(response, len(sources))
@@ -397,15 +446,17 @@ class GenerationService:
             num_questions=num_questions,
         )
 
-        # Generate questions
+        # Generate questions (use QA model for fast response)
         try:
-            response = await self._generate_with_llm(system_prompt, user_prompt)
+            response, model_used = await self._generate_with_llm(
+                system_prompt, user_prompt, intent=QueryIntent.QA
+            )
         except Exception as e:
             logger.error(
                 "Suggestions generation failed",
                 error=str(e),
             )
-            raise LLMError(str(e), self.settings.generation_model)
+            raise LLMError(str(e), self.settings.qa_model)
 
         # Parse questions from response
         questions = parse_questions(response)
@@ -440,23 +491,34 @@ class GenerationService:
         self,
         system_prompt: str,
         user_prompt: str,
-    ) -> str:
+        intent: QueryIntent | None = None,
+    ) -> tuple[str, str]:
         """Generate content using the LLM.
 
         Args:
             system_prompt: System message
             user_prompt: User message
+            intent: Optional query intent for model selection
 
         Returns:
-            Generated text
+            Tuple of (generated text, model name used)
         """
+        llm, model_name = self._get_llm_for_intent(intent)
+
+        logger.info(
+            "Generating with LLM",
+            model=model_name,
+            intent=intent.value if intent else "default",
+            num_ctx=self.settings.ollama_num_ctx,
+        )
+
         messages = [
             SystemMessage(content=system_prompt),
             HumanMessage(content=user_prompt),
         ]
 
-        response = await self.llm.ainvoke(messages)
-        return response.content
+        response = await llm.ainvoke(messages)
+        return response.content, model_name
 
     def _parse_into_sections(
         self,

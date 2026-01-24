@@ -8,7 +8,7 @@ Verifies that queries are correctly classified as:
 
 import pytest
 
-from app.models import QueryIntent, RetrievalType
+from app.models import QueryIntent, RetrievalType, SummaryScope
 from app.services.intent import IntentService, get_intent_service
 
 
@@ -182,6 +182,7 @@ class TestIntentClassificationSerialization:
         assert data["suggested_retrieval"] == "diverse"
         assert "confidence" in data
         assert "reasoning" in data
+        assert "summary_scope" in data
 
     def test_from_dict(self, intent_service: IntentService):
         """IntentClassification should deserialize from dict correctly."""
@@ -192,6 +193,8 @@ class TestIntentClassificationSerialization:
             "confidence": 0.85,
             "reasoning": "Test reasoning",
             "suggested_retrieval": "diverse",
+            "summary_scope": "focused",
+            "focus_topic": "ethics",
         }
 
         result = IntentClassification.from_dict(data)
@@ -200,6 +203,8 @@ class TestIntentClassificationSerialization:
         assert result.confidence == 0.85
         assert result.reasoning == "Test reasoning"
         assert result.suggested_retrieval == RetrievalType.DIVERSE
+        assert result.summary_scope == SummaryScope.FOCUSED
+        assert result.focus_topic == "ethics"
 
 
 class TestIntentServiceSingleton:
@@ -211,3 +216,103 @@ class TestIntentServiceSingleton:
         service2 = get_intent_service()
 
         assert service1 is service2
+
+
+class TestSummaryScopeDetection:
+    """Test summary scope detection (broad vs focused)."""
+
+    @pytest.fixture
+    def intent_service(self) -> IntentService:
+        return IntentService()
+
+    # ========================================================================
+    # Broad Summary Tests
+    # ========================================================================
+
+    @pytest.mark.parametrize(
+        "query",
+        [
+            "Summarize this document",
+            "Give me a summary",
+            "Provide an overview",
+            "What are the main points?",
+            "What are the key takeaways?",
+            "Overview of this document",
+            "Summarize the document",
+        ],
+    )
+    def test_broad_summary_detected(self, intent_service: IntentService, query: str):
+        """Broad summary requests should have BROAD scope."""
+        result = intent_service.detect_intent(query)
+
+        assert result.intent == QueryIntent.ANALYSIS
+        assert result.summary_scope == SummaryScope.BROAD
+        assert result.focus_topic is None
+
+    # ========================================================================
+    # Focused Summary Tests
+    # ========================================================================
+
+    @pytest.mark.parametrize(
+        "query,expected_topic",
+        [
+            ("Summarize the ethics section in this document", "ethics"),
+            ("Summarize data bias in this document", "bias"),
+            ("Go deeper on intersectionality", "intersectionality"),
+            ("More detail on the methodology", "methodology"),
+            ("Focus on the results section", "results"),
+            ("Analyze the findings in this document", "findings"),
+        ],
+    )
+    def test_focused_summary_detected(
+        self, intent_service: IntentService, query: str, expected_topic: str
+    ):
+        """Focused summary requests should have FOCUSED scope with topic extracted."""
+        result = intent_service.detect_intent(query)
+
+        assert result.intent == QueryIntent.ANALYSIS
+        assert result.summary_scope == SummaryScope.FOCUSED
+        assert result.focus_topic is not None
+        # Topic should contain the key word
+        assert expected_topic.lower() in result.focus_topic.lower()
+
+    # ========================================================================
+    # Non-Analysis Intents
+    # ========================================================================
+
+    def test_writing_intent_has_not_applicable_scope(self, intent_service: IntentService):
+        """Writing intent should have NOT_APPLICABLE summary scope."""
+        result = intent_service.detect_intent("Write a cover letter")
+
+        assert result.intent == QueryIntent.WRITING
+        assert result.summary_scope == SummaryScope.NOT_APPLICABLE
+        assert result.focus_topic is None
+
+    def test_qa_intent_has_not_applicable_scope(self, intent_service: IntentService):
+        """QA intent should have NOT_APPLICABLE summary scope."""
+        result = intent_service.detect_intent("What is my degree?")
+
+        assert result.intent == QueryIntent.QA
+        assert result.summary_scope == SummaryScope.NOT_APPLICABLE
+        assert result.focus_topic is None
+
+    # ========================================================================
+    # Serialization with Summary Scope
+    # ========================================================================
+
+    def test_to_dict_includes_summary_scope(self, intent_service: IntentService):
+        """Serialization should include summary_scope."""
+        result = intent_service.detect_intent("Summarize the ethics in this document")
+        data = result.to_dict()
+
+        assert "summary_scope" in data
+        assert data["summary_scope"] in ["broad", "focused", "not_applicable"]
+
+    def test_to_dict_includes_focus_topic_when_present(self, intent_service: IntentService):
+        """Serialization should include focus_topic when present."""
+        result = intent_service.detect_intent("Summarize the ethics in this document")
+        data = result.to_dict()
+
+        if result.summary_scope == SummaryScope.FOCUSED:
+            assert "focus_topic" in data
+            assert data["focus_topic"] is not None

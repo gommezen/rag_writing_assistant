@@ -2,6 +2,115 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.1] - 2026-01-24
+
+### Added
+
+#### Frontend
+- **Coverage Stats Display**: New UI component showing document coverage after generation
+  - Coverage percentage with color-coded indicator (green ≥40%, yellow 20-40%, red <20%)
+  - Chunks analyzed vs total chunks
+  - Retrieval type (diverse/similarity)
+  - Intent mode badge (ANALYSIS/QA/WRITING)
+  - Blind spots list (if any regions weren't covered)
+
+- **Expand Coverage Button**: "↑ Expand to ~50%" button in coverage stats
+  - Only appears when coverage <50% and using diverse retrieval
+  - Triggers `escalate_coverage` parameter for deeper analysis
+  - Re-generates with 15% additional coverage
+
+#### Backend
+- **Coverage-Based Retrieval**: Diverse retrieval now targets coverage percentage instead of fixed chunk count
+  - `target_coverage_pct` parameter (default: 35%)
+  - Dynamically calculates chunks needed based on document size
+  - Escalation adds 15% coverage (up to 60% max)
+
+- **Intent-Specific Model Selection**: Generation uses different models per intent
+  - ANALYSIS: `llama3.1:8b-instruct-q8_0` (higher quality reasoning)
+  - WRITING: `qwen2.5:7b-instruct-q4_0` (good prose quality)
+  - QA: `gemma3:4b` (fast responses)
+
+- **Improved Intent Detection**: Better pattern matching for summary requests
+  - "write a summary" now correctly triggers ANALYSIS mode (not WRITING)
+  - "of this document" triggers ANALYSIS mode
+  - ANALYSIS patterns checked before WRITING to prevent false matches
+  - Higher confidence boost for ANALYSIS (0.20 vs 0.15)
+
+#### Configuration
+- `DEFAULT_COVERAGE_PCT`: Target coverage for diverse retrieval (default: 35%)
+- `MAX_COVERAGE_PCT`: Maximum coverage with escalation (default: 60%)
+- `ANALYSIS_MODEL`, `WRITING_MODEL`, `QA_MODEL`: Intent-specific model overrides
+
+### Changed
+- Diverse retrieval now uses percentage-based targeting instead of fixed 30 chunks
+- Intent detection order changed: ANALYSIS → QA → WRITING (was WRITING first)
+- Frontend types updated with full coverage and intent type definitions
+
+---
+
+## [0.2.0] - 2026-01-24
+
+### Added
+
+#### Document Intelligence System
+- **Intent Detection Service**: Automatically classifies queries as ANALYSIS, QA, or WRITING based on pattern matching
+  - ANALYSIS: "summarize", "overview", "main points", "key takeaways"
+  - QA: Questions starting with what/when/where/who/why/how
+  - WRITING: "write", "draft", "create", "compose" (default for ambiguous queries)
+
+- **Diverse Retrieval Service**: Region-based sampling for analysis mode
+  - Samples from intro (30%), middle (40%), and conclusion (30%) regions
+  - Provides representative coverage across entire document
+  - Target: ~30 chunks per document
+
+- **Coverage Descriptor**: Tracks what portion of documents the system has seen
+  - `chunks_seen` / `chunks_total` with percentage
+  - `regions_covered` and `regions_missing`
+  - `blind_spots` list for transparency
+  - `coverage_summary` injected into prompts
+
+- **Summary Scope Detection**: Distinguishes broad from focused summaries
+  - BROAD: "Summarize this document" → exploratory overview + suggested focus areas
+  - FOCUSED: "Summarize the ethics section" → deep synthesis on specific topic
+  - Enables escalation flow: broad overview → user picks focus → deep dive
+
+- **Epistemic Guardrails in Prompts**:
+  - Coverage-aware system prompts ("You are seeing ~12% of the document...")
+  - Claim-evidence separation (Observations vs Synthesized Patterns)
+  - Contradiction awareness (present both views without forcing resolution)
+  - Blind spots section (what couldn't be assessed)
+  - Questions raised section (intellectual honesty)
+
+#### New Prompt Templates
+- `ANALYSIS_SYSTEM_PROMPT`: Epistemic rules for document analysis
+- `ANALYSIS_PROMPT`: Structured output with 5 sections
+- `EXPLORATORY_SUMMARY_PROMPT`: Overview + suggested focus areas
+- `FOCUSED_SUMMARY_PROMPT`: Deep synthesis on specific topic
+- `COVERAGE_AWARE_GENERATION_PROMPT`: Writing/QA with coverage context
+
+#### New Models
+- `QueryIntent` enum (ANALYSIS, QA, WRITING)
+- `RetrievalType` enum (SIMILARITY, DIVERSE)
+- `DocumentRegion` enum (INTRO, MIDDLE, CONCLUSION)
+- `SummaryScope` enum (BROAD, FOCUSED, NOT_APPLICABLE)
+- `DocumentCoverage` dataclass
+- `CoverageDescriptor` dataclass
+- `IntentClassification` dataclass
+
+#### Tests
+- 62 new tests for intent detection and summary scope
+- Tests for diverse retrieval and coverage computation
+
+### Changed
+
+#### Backend
+- Generation service now detects intent and routes to appropriate retrieval strategy
+- Analysis queries use diverse sampling; writing/QA use similarity search
+- Prompts include coverage context so LLM knows its limitations
+- `RetrievalMetadata` extended with `coverage` and `intent` fields
+
+---
+
 ## [0.1.2] - 2026-01-24
 
 ### Added

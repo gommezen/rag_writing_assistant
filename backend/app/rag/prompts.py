@@ -52,6 +52,71 @@ OUTPUT STRUCTURE (maintain claim-evidence separation):
 
 Begin your analysis:"""
 
+    # === EXPLORATORY SUMMARY PROMPT (Broad summaries) ===
+
+    EXPLORATORY_SUMMARY_PROMPT = """Provide an exploratory overview of this document based on a representative sample.
+
+IMPORTANT - THIS IS AN EXPLORATORY OVERVIEW:
+{coverage_info}
+
+You are seeing a sample across different parts of the document. Your goal is to:
+1. Identify the main topics and themes present
+2. Give the user a map of what the document contains
+3. Suggest specific areas they might want to explore deeper
+
+CONTEXT ({num_sources} sources from different document regions):
+{context}
+
+OUTPUT STRUCTURE:
+
+## Document Overview
+[2-3 sentences describing what this document appears to be about, based on the sample. Use tentative language: "appears to cover", "seems to focus on", "includes discussion of".]
+
+## Key Topics Identified
+[Bullet list of main topics/themes found in the sample. Cite sources: [Source N]]
+
+## Notable Points
+[3-5 specific observations that stood out, with citations]
+
+## Suggested Focus Areas
+[Based on what you've seen, suggest 3-5 specific questions or topics the user could explore for deeper understanding. Frame these as actionable next steps like "To understand X better, try asking about..." or "For more detail on Y, focus on..."]
+
+## Coverage Note
+[Brief note on what parts of the document this sample represents and what might be missing]
+
+Begin your exploratory overview:"""
+
+    # === FOCUSED SUMMARY PROMPT (Topic-scoped deep synthesis) ===
+
+    FOCUSED_SUMMARY_PROMPT = """Provide a focused analysis of "{focus_topic}" based on the document content.
+
+COVERAGE CONTEXT:
+{coverage_info}
+
+The user wants to understand "{focus_topic}" specifically. Focus your analysis narrowly on this topic.
+
+CONTEXT ({num_sources} sources):
+{context}
+
+OUTPUT STRUCTURE:
+
+## Summary: {focus_topic}
+[Provide a focused synthesis of what the document says about this specific topic. Cite every claim with [Source N].]
+
+## Key Details
+[Specific facts, figures, or statements about {focus_topic} found in the sources]
+
+## Related Connections
+[How this topic connects to other themes mentioned in the sources]
+
+## Gaps in Coverage
+[What aspects of {focus_topic} are NOT covered in the available sources? What would you need to see to give a more complete picture?]
+
+## Follow-up Questions
+[2-3 specific questions that would deepen understanding of {focus_topic}]
+
+Begin your focused analysis:"""
+
     # === STANDARD WRITING MODE PROMPTS ===
 
     SYSTEM_PROMPT = """You are a writing assistant that helps users write through uncertainty and draft professional documents.
@@ -351,3 +416,60 @@ def build_coverage_aware_generation_prompt(
     )
 
     return PromptTemplates.SYSTEM_PROMPT, user_prompt
+
+
+def build_exploratory_summary_prompt(
+    sources: list[dict],
+    coverage_summary: str,
+) -> tuple[str, str]:
+    """Build prompt for broad/exploratory summaries.
+
+    Used when user asks for general summarization without a specific topic.
+    Outputs overview + suggested focus areas for deeper exploration.
+
+    Args:
+        sources: Retrieved source chunks (from diverse sampling)
+        coverage_summary: Human-readable coverage description
+
+    Returns:
+        Tuple of (system_prompt, user_prompt)
+    """
+    context, num_sources = format_context(sources)
+
+    user_prompt = PromptTemplates.EXPLORATORY_SUMMARY_PROMPT.format(
+        coverage_info=coverage_summary,
+        context=context,
+        num_sources=num_sources if num_sources > 0 else 0,
+    )
+
+    return PromptTemplates.ANALYSIS_SYSTEM_PROMPT, user_prompt
+
+
+def build_focused_summary_prompt(
+    focus_topic: str,
+    sources: list[dict],
+    coverage_summary: str,
+) -> tuple[str, str]:
+    """Build prompt for focused/topic-scoped summaries.
+
+    Used when user asks to summarize a specific topic within the document.
+    Outputs deep synthesis on the specified topic.
+
+    Args:
+        focus_topic: The specific topic to focus on
+        sources: Retrieved source chunks
+        coverage_summary: Human-readable coverage description
+
+    Returns:
+        Tuple of (system_prompt, user_prompt)
+    """
+    context, num_sources = format_context(sources)
+
+    user_prompt = PromptTemplates.FOCUSED_SUMMARY_PROMPT.format(
+        focus_topic=focus_topic,
+        coverage_info=coverage_summary,
+        context=context,
+        num_sources=num_sources if num_sources > 0 else 0,
+    )
+
+    return PromptTemplates.ANALYSIS_SYSTEM_PROMPT, user_prompt

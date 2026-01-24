@@ -21,13 +21,25 @@ class Settings(BaseSettings):
     # Ollama LLM settings
     ollama_base_url: str = "http://localhost:11434"
     embedding_model: str = "mxbai-embed-large"
-    generation_model: str = "llama3.1:8b-instruct-q4_0"
+    generation_model: str = "qwen2.5:7b-instruct-q4_0"  # Default/fallback model
+
+    # Context window (4x default for better coverage)
+    ollama_num_ctx: int = 8192
+
+    # Intent-specific models
+    analysis_model: str = "llama3.1:8b-instruct-q8_0"  # Higher quality for deep analysis
+    writing_model: str = "qwen2.5:7b-instruct-q4_0"    # Best prose quality
+    qa_model: str = "gemma3:4b"                        # Fast for simple questions
 
     # RAG settings
     chunk_size: int = 500
     chunk_overlap: int = 100
     similarity_threshold: float = 0.35
     top_k_retrieval: int = 10
+
+    # Coverage settings for analysis mode
+    default_coverage_pct: float = 35.0    # Target coverage for diverse retrieval
+    max_coverage_pct: float = 60.0        # Maximum coverage (with escalation)
 
     # Data paths
     data_dir: Path = Path("data")
