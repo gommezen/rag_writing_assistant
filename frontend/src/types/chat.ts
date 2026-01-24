@@ -47,3 +47,11 @@ export interface ChatResponse {
   generation_time_ms: number;
   model_used: string;
 }
+
+export interface ConversationSummary {
+  conversation_id: string;
+  title: string;
+  message_count: number;
+  created_at: string;
+  updated_at: string;
+}

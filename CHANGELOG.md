@@ -2,6 +2,52 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.2] - 2026-01-24
+
+### Added
+
+#### Chat Persistence & History
+- **Conversation Storage**: Conversations now persist across server restarts
+  - JSON file-based storage in `data/conversations/`
+  - Lightweight index file for fast listing
+  - Individual files per conversation for full data
+  - Auto-save after each message
+
+- **Conversation History UI**: New sidebar component in chat mode
+  - Browse past conversations with title and timestamp
+  - Resume any previous conversation
+  - Delete conversations with confirmation
+  - "New Chat" button to start fresh
+  - Highlights current active conversation
+
+- **Backend Endpoints**:
+  - `GET /api/chat` - List all conversations (sorted by updated_at)
+  - `DELETE /api/chat/{id}` - Delete a conversation
+  - `PATCH /api/chat/{id}` - Update conversation title
+
+- **New Models**:
+  - `ConversationSummary` - Lightweight summary for listings
+  - `ConversationSummaryResponse` - API response model
+  - `from_dict()` methods on `ChatMessage` and `Conversation` for deserialization
+
+- **New Services**:
+  - `ConversationStore` - File-based persistence service
+  - Methods: `save_conversation`, `load_conversation`, `list_conversations`, `delete_conversation`, `update_title`
+
+#### Frontend
+- `ConversationHistory` component with delete confirmation
+- `useConversations` hook for listing conversations
+- `useDeleteConversation` hook with cache invalidation
+- `useUpdateConversationTitle` hook
+- API client methods for conversation management
+
+### Changed
+- `ChatService` now uses `ConversationStore` for persistence
+- Conversations loaded from storage on server startup
+- Chat mode sidebar shows conversation history instead of just "New Chat" button
+
+---
+
 ## [0.2.1] - 2026-01-24
 
 ### Added

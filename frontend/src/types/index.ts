@@ -44,4 +44,5 @@ export type {
   ChatRole,
   ContextUsed,
   Conversation,
+  ConversationSummary,
 } from './chat';

@@ -56,6 +56,22 @@ class ChatMessage:
             result["sections"] = [s.to_dict() for s in self.sections]
         return result
 
+    @classmethod
+    def from_dict(cls, data: dict) -> "ChatMessage":
+        """Create ChatMessage from dictionary (for deserialization)."""
+        from datetime import datetime
+        sections = None
+        if data.get("sections"):
+            sections = [GeneratedSection.from_dict(s) for s in data["sections"]]
+        return cls(
+            message_id=data["message_id"],
+            role=ChatRole(data["role"]),
+            content=data["content"],
+            timestamp=datetime.fromisoformat(data["timestamp"]),
+            sections=sections,
+            sources_used=[SourceReference.from_dict(s) for s in data.get("sources_used", [])],
+        )
+
 
 @dataclass
 class Conversation:
@@ -80,6 +96,75 @@ class Conversation:
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),
         }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "Conversation":
+        """Create Conversation from dictionary (for deserialization)."""
+        from datetime import datetime
+        cumulative_coverage = None
+        if data.get("cumulative_coverage"):
+            cumulative_coverage = CoverageDescriptor.from_dict(data["cumulative_coverage"])
+        return cls(
+            conversation_id=data["conversation_id"],
+            messages=[ChatMessage.from_dict(m) for m in data.get("messages", [])],
+            document_ids=data.get("document_ids"),
+            cumulative_coverage=cumulative_coverage,
+            created_at=datetime.fromisoformat(data["created_at"]),
+            updated_at=datetime.fromisoformat(data["updated_at"]),
+        )
+
+
+@dataclass
+class ConversationSummary:
+    """Lightweight summary of a conversation for listing.
+
+    Used in the conversation index to avoid loading full conversation data.
+    """
+    conversation_id: str
+    title: str  # First user message, truncated
+    message_count: int
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+    def to_dict(self) -> dict:
+        return {
+            "conversation_id": self.conversation_id,
+            "title": self.title,
+            "message_count": self.message_count,
+            "created_at": self.created_at.isoformat(),
+            "updated_at": self.updated_at.isoformat(),
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "ConversationSummary":
+        """Create ConversationSummary from dictionary."""
+        from datetime import datetime
+        return cls(
+            conversation_id=data["conversation_id"],
+            title=data["title"],
+            message_count=data["message_count"],
+            created_at=datetime.fromisoformat(data["created_at"]),
+            updated_at=datetime.fromisoformat(data["updated_at"]),
+        )
+
+    @classmethod
+    def from_conversation(cls, conversation: "Conversation", max_title_length: int = 50) -> "ConversationSummary":
+        """Create summary from a full Conversation."""
+        # Find first user message for title
+        title = "New conversation"
+        for msg in conversation.messages:
+            if msg.role == ChatRole.USER:
+                title = msg.content[:max_title_length]
+                if len(msg.content) > max_title_length:
+                    title += "..."
+                break
+        return cls(
+            conversation_id=conversation.conversation_id,
+            title=title,
+            message_count=len(conversation.messages),
+            created_at=conversation.created_at,
+            updated_at=conversation.updated_at,
+        )
 
 
 # Pydantic models for API request/response validation
@@ -173,6 +258,27 @@ class ConversationResponse(BaseModel):
             cumulative_coverage=CoverageDescriptorResponse.from_dataclass(conversation.cumulative_coverage) if conversation.cumulative_coverage else None,
             created_at=conversation.created_at.isoformat(),
             updated_at=conversation.updated_at.isoformat(),
+        )
+
+    model_config = {"extra": "forbid"}
+
+
+class ConversationSummaryResponse(BaseModel):
+    """API response model for conversation summary (used in listings)."""
+    conversation_id: str
+    title: str
+    message_count: int
+    created_at: str
+    updated_at: str
+
+    @classmethod
+    def from_dataclass(cls, summary: ConversationSummary) -> "ConversationSummaryResponse":
+        return cls(
+            conversation_id=summary.conversation_id,
+            title=summary.title,
+            message_count=summary.message_count,
+            created_at=summary.created_at.isoformat(),
+            updated_at=summary.updated_at.isoformat(),
         )
 
     model_config = {"extra": "forbid"}

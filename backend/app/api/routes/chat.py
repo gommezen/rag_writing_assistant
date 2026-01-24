@@ -3,10 +3,13 @@
 from fastapi import APIRouter, HTTPException
 
 from ...core import GenerationError, LLMError
+from pydantic import BaseModel, Field
+
 from ...models import (
     ChatRequest,
     ChatResponse,
     ConversationResponse,
+    ConversationSummaryResponse,
 )
 from ...services import get_chat_service
 
@@ -76,3 +79,71 @@ async def get_conversation(conversation_id: str) -> ConversationResponse:
         )
 
     return ConversationResponse.from_dataclass(conversation)
+
+
+@router.get("", response_model=list[ConversationSummaryResponse])
+async def list_conversations() -> list[ConversationSummaryResponse]:
+    """List all conversations.
+
+    Returns conversations sorted by updated_at (newest first).
+    Each entry includes a title (first user message, truncated) and metadata.
+
+    Returns:
+        List of conversation summaries
+    """
+    service = get_chat_service()
+    summaries = service.list_conversations()
+    return [ConversationSummaryResponse.from_dataclass(s) for s in summaries]
+
+
+class UpdateTitleRequest(BaseModel):
+    """Request to update a conversation's title."""
+    title: str = Field(..., min_length=1, max_length=200)
+
+
+@router.patch("/{conversation_id}")
+async def update_conversation(
+    conversation_id: str,
+    request: UpdateTitleRequest,
+) -> dict:
+    """Update a conversation's title.
+
+    Args:
+        conversation_id: The conversation ID
+        request: Request containing the new title
+
+    Returns:
+        Success message
+    """
+    service = get_chat_service()
+
+    if not service.update_conversation_title(conversation_id, request.title):
+        raise HTTPException(
+            status_code=404,
+            detail=f"Conversation not found: {conversation_id}",
+        )
+
+    return {"message": "Title updated successfully"}
+
+
+@router.delete("/{conversation_id}")
+async def delete_conversation(conversation_id: str) -> dict:
+    """Delete a conversation.
+
+    Permanently removes the conversation and all its messages.
+
+    Args:
+        conversation_id: The conversation ID to delete
+
+    Returns:
+        Success message
+    """
+    service = get_chat_service()
+
+    if not service.delete_conversation(conversation_id):
+        raise HTTPException(
+            status_code=404,
+            detail=f"Conversation not found: {conversation_id}",
+        )
+
+    return {"message": "Conversation deleted successfully"}

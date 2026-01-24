@@ -11,6 +11,8 @@ Generate AI-written content grounded in your own documents, with full source tra
 - **Section-level editing** - Regenerate or manually edit individual sections
 - **Coverage transparency** - See exactly what % of your documents were analyzed
 - **Intent detection** - Auto-selects best model and retrieval strategy per query
+- **Chat mode** - Multi-turn conversations with persistent history
+- **Conversation history** - Resume past chats, browse history in sidebar
 - **Fully local** - Documents never leave your machine (runs on Ollama)
 
 ## Governance & Transparency
@@ -122,6 +124,18 @@ The system automatically detects query intent and adjusts behavior:
 - Intent mode (ANALYSIS/QA/WRITING)
 - "Expand to ~50%" button for deeper analysis
 
+### Chat Mode
+
+Switch to Chat mode for multi-turn conversations about your documents:
+
+- **Follow-up questions**: Ask clarifying questions that build on prior context
+- **Conversation history**: Browse and resume past conversations in the sidebar
+- **Persistent storage**: Conversations survive server restarts (stored in `data/conversations/`)
+- **Per-message sources**: Each response shows which document chunks were used
+- **Cumulative coverage**: Track total document coverage across a conversation
+
+Chat history is stored locally as JSON files and is never sent externally.
+
 ### Intent-Specific Models
 
 The system automatically selects the best model based on query intent:
@@ -171,6 +185,11 @@ frontend/
 | `/api/documents/{id}` | DELETE | Delete document |
 | `/api/generate` | POST | Generate draft |
 | `/api/generate/section` | POST | Regenerate section |
+| `/api/chat` | POST | Send chat message (creates or continues conversation) |
+| `/api/chat` | GET | List all conversations |
+| `/api/chat/{id}` | GET | Get conversation by ID |
+| `/api/chat/{id}` | DELETE | Delete conversation |
+| `/api/chat/{id}` | PATCH | Update conversation title |
 | `/api/health` | GET | Health check |
 
 ### Document Upload Flow

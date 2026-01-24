@@ -45,6 +45,7 @@ class Settings(BaseSettings):
     data_dir: Path = Path("data")
     vectors_dir: Path = Path("data/vectors")
     documents_dir: Path = Path("data/documents")
+    conversations_dir: Path = Path("data/conversations")
 
     # API settings
     api_host: str = "0.0.0.0"
@@ -60,6 +61,7 @@ class Settings(BaseSettings):
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self.vectors_dir.mkdir(parents=True, exist_ok=True)
         self.documents_dir.mkdir(parents=True, exist_ok=True)
+        self.conversations_dir.mkdir(parents=True, exist_ok=True)
 
 
 @lru_cache

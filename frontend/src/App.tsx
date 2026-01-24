@@ -13,6 +13,7 @@ import { DocumentEditor } from './components/DocumentEditor';
 import { DocumentPreview } from './components/DocumentPreview';
 import { WarningBanner } from './components/WarningBanner';
 import { ChatView } from './components/ChatView';
+import { ConversationHistory } from './components/ConversationHistory';
 import {
   useDocuments,
   useDocumentChunks,
@@ -23,6 +24,9 @@ import {
   useRegenerateSection,
   useSuggestedQuestions,
   useChat,
+  useConversations,
+  useConversation,
+  useDeleteConversation,
 } from './hooks';
 import type { GeneratedSection, Document, RetrievalMetadata, ChatMessage, CoverageDescriptor, ContextUsed } from './types';
 import './App.css';
@@ -86,6 +90,11 @@ function App() {
   const regenerateMutation = useRegenerateSection();
   const suggestionsMutation = useSuggestedQuestions();
   const chatMutation = useChat();
+
+  // Conversation history hooks
+  const { data: conversationsData, isLoading: isLoadingConversations } = useConversations();
+  const deleteConversationMutation = useDeleteConversation();
+  const { data: loadedConversation } = useConversation(conversationId);
 
   // Document preview
   const { data: chunksData, isLoading: isLoadingChunks } = useDocumentChunks(previewDocumentId);
@@ -348,6 +357,33 @@ function App() {
     setLastContextUsed(null);
   }, []);
 
+  // Handle selecting a conversation from history
+  const handleSelectConversation = useCallback((selectedId: string) => {
+    setConversationId(selectedId);
+    // Messages will be loaded via useConversation hook
+  }, []);
+
+  // Load messages when conversation data is fetched
+  useEffect(() => {
+    if (loadedConversation) {
+      setChatMessages(loadedConversation.messages);
+      setCumulativeCoverage(loadedConversation.cumulative_coverage);
+    }
+  }, [loadedConversation]);
+
+  // Handle deleting a conversation
+  const handleDeleteConversation = useCallback(async (deleteId: string) => {
+    try {
+      await deleteConversationMutation.mutateAsync(deleteId);
+      // If we deleted the current conversation, start a new chat
+      if (deleteId === conversationId) {
+        handleNewChat();
+      }
+    } catch (error) {
+      console.error('Failed to delete conversation:', error);
+    }
+  }, [deleteConversationMutation, conversationId, handleNewChat]);
+
   return (
     <div className="app">
       <header className="app__header">
@@ -481,18 +517,16 @@ function App() {
               </div>
             )}
 
-            {/* New Chat Button (Chat Mode) */}
-            {!sidebarCollapsed && mode === 'chat' && chatMessages.length > 0 && (
-              <div className="new-chat-section">
-                <button
-                  type="button"
-                  className="new-chat-btn"
-                  onClick={handleNewChat}
-                >
-                  <MessageSquare size={16} />
-                  New Chat
-                </button>
-              </div>
+            {/* Conversation History (Chat Mode) */}
+            {!sidebarCollapsed && mode === 'chat' && (
+              <ConversationHistory
+                conversations={conversationsData ?? []}
+                currentConversationId={conversationId}
+                onSelect={handleSelectConversation}
+                onDelete={handleDeleteConversation}
+                onNewChat={handleNewChat}
+                isLoading={isLoadingConversations}
+              />
             )}
           </section>
         </aside>
