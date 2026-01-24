@@ -2,8 +2,14 @@
 
 from .common import (
     ConfidenceLevel,
+    CoverageDescriptor,
+    DocumentCoverage,
+    DocumentRegion,
     GeneratedSection,
+    IntentClassification,
+    QueryIntent,
     RetrievalMetadata,
+    RetrievalType,
     SourceReference,
     WarningType,
 )
@@ -16,10 +22,13 @@ from .document import (
     DocumentType,
 )
 from .generation import (
+    CoverageDescriptorResponse,
+    DocumentCoverageResponse,
     GeneratedSectionResponse,
     GenerationRequest,
     GenerationResponse,
     GenerationResult,
+    IntentClassificationResponse,
     RegenerateSectionRequest,
     RegenerateSectionResponse,
     RegenerationResult,
@@ -32,8 +41,14 @@ from .generation import (
 __all__ = [
     # Common
     "ConfidenceLevel",
+    "CoverageDescriptor",
+    "DocumentCoverage",
+    "DocumentRegion",
     "GeneratedSection",
+    "IntentClassification",
+    "QueryIntent",
     "RetrievalMetadata",
+    "RetrievalType",
     "SourceReference",
     "WarningType",
     # Document
@@ -44,10 +59,13 @@ __all__ = [
     "DocumentStatus",
     "DocumentType",
     # Generation
+    "CoverageDescriptorResponse",
+    "DocumentCoverageResponse",
     "GeneratedSectionResponse",
     "GenerationRequest",
     "GenerationResponse",
     "GenerationResult",
+    "IntentClassificationResponse",
     "RegenerateSectionRequest",
     "RegenerateSectionResponse",
     "RegenerationResult",

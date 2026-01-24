@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.2] - 2026-01-24
+
+### Added
+
+#### Backend
+- **Non-blocking document upload**: Upload endpoint returns immediately with `pending` status while processing happens in background
+- **Background processing**: Document parsing, chunking, and embedding now run asynchronously using ThreadPoolExecutor
+- **Stale document cleanup**: Documents stuck in `processing` or `pending` state are marked as `failed` on server restart
+
+#### Frontend
+- **Document polling**: Frontend automatically polls for document status until processing completes
+- **Processing animation**: Documents show pulsing animation while in `pending` or `processing` state
+- **Polling timeout**: Stops polling after ~2 minutes to prevent infinite loops
+
+### Changed
+
+#### Backend
+- `POST /api/documents` now returns immediately with `pending` status instead of waiting for full processing
+- Document status lifecycle: `pending` → `processing` → `ready` (or `failed`)
+
+#### Frontend
+- `useUploadDocument` hook now tracks uploaded document ID for polling
+- Documents list refreshes automatically when processing completes
+
+---
+
 ## [0.1.1] - 2026-01-23
 
 ### Added

@@ -6,9 +6,19 @@ Provides similarity search with threshold filtering and metadata tracking.
 import time
 from datetime import UTC, datetime
 
+from collections import defaultdict
+
 from ..config import get_settings
 from ..core import get_logger
-from ..models import DocumentChunk, RetrievalMetadata, SourceReference
+from ..models import (
+    CoverageDescriptor,
+    DocumentChunk,
+    DocumentCoverage,
+    DocumentRegion,
+    RetrievalMetadata,
+    RetrievalType,
+    SourceReference,
+)
 from ..rag import get_vector_store
 
 logger = get_logger(__name__)
@@ -133,6 +143,140 @@ class RetrievalService:
             if chunk.chunk_id == source.chunk_id:
                 return chunk.content
         return source.excerpt  # Fallback to excerpt if not found
+
+    def compute_similarity_coverage(
+        self,
+        sources: list[SourceReference],
+        document_ids: list[str] | None = None,
+    ) -> CoverageDescriptor:
+        """Compute coverage descriptor for similarity-based retrieval.
+
+        Coverage is computed AFTER retrieval to describe what portion
+        of the available documents was actually seen.
+
+        Args:
+            sources: Retrieved source references
+            document_ids: Optional filter by document IDs
+
+        Returns:
+            CoverageDescriptor describing the retrieval coverage
+        """
+        # Get all chunks for coverage calculation
+        all_chunks = self.vector_store.chunks
+        if document_ids:
+            all_chunks = [c for c in all_chunks if c.document_id in document_ids]
+
+        if not all_chunks:
+            return CoverageDescriptor(
+                retrieval_type=RetrievalType.SIMILARITY,
+                chunks_seen=0,
+                chunks_total=0,
+                coverage_percentage=0,
+                document_coverage={},
+                blind_spots=["No documents available"],
+                coverage_summary="No documents are available for retrieval.",
+            )
+
+        # Group all chunks by document
+        all_by_doc: dict[str, list[DocumentChunk]] = defaultdict(list)
+        for chunk in all_chunks:
+            all_by_doc[chunk.document_id].append(chunk)
+
+        # Get chunk IDs from sources
+        source_chunk_ids = {s.chunk_id for s in sources}
+
+        # Group retrieved chunks by document
+        retrieved_by_doc: dict[str, int] = defaultdict(int)
+        for source in sources:
+            retrieved_by_doc[source.document_id] += 1
+
+        # Compute per-document coverage
+        doc_coverage: dict[str, DocumentCoverage] = {}
+        blind_spots: list[str] = []
+
+        for doc_id, chunks in all_by_doc.items():
+            chunks.sort(key=lambda c: c.chunk_index)
+            doc_title = chunks[0].metadata.get("title", doc_id) if chunks else doc_id
+            chunks_seen = retrieved_by_doc.get(doc_id, 0)
+
+            # Determine covered regions based on retrieved chunks
+            regions_covered = []
+            for chunk in chunks:
+                if chunk.chunk_id in source_chunk_ids:
+                    total = len(chunks)
+                    position = chunk.chunk_index / total if total > 0 else 0
+                    if position < 0.2:
+                        regions_covered.append(DocumentRegion.INTRO)
+                    elif position < 0.8:
+                        regions_covered.append(DocumentRegion.MIDDLE)
+                    else:
+                        regions_covered.append(DocumentRegion.CONCLUSION)
+
+            regions_covered = list(set(regions_covered))
+            all_regions = {DocumentRegion.INTRO, DocumentRegion.MIDDLE, DocumentRegion.CONCLUSION}
+            regions_missing = list(all_regions - set(regions_covered))
+
+            doc_cov = DocumentCoverage(
+                document_id=doc_id,
+                document_title=doc_title,
+                chunks_seen=chunks_seen,
+                chunks_total=len(chunks),
+                regions_covered=regions_covered,
+                regions_missing=regions_missing,
+            )
+            doc_coverage[doc_id] = doc_cov
+
+            # Track blind spots for documents with no coverage
+            if chunks_seen == 0:
+                blind_spots.append(f"'{doc_title}': no chunks retrieved")
+
+        # Compute overall coverage
+        total_chunks = len(all_chunks)
+        chunks_seen = len(sources)
+        coverage_pct = (chunks_seen / total_chunks * 100) if total_chunks > 0 else 0
+
+        # Build coverage summary
+        coverage_summary = self._build_similarity_coverage_summary(
+            chunks_seen=chunks_seen,
+            total_chunks=total_chunks,
+            coverage_pct=coverage_pct,
+            doc_count=len(doc_coverage),
+        )
+
+        return CoverageDescriptor(
+            retrieval_type=RetrievalType.SIMILARITY,
+            chunks_seen=chunks_seen,
+            chunks_total=total_chunks,
+            coverage_percentage=coverage_pct,
+            document_coverage=doc_coverage,
+            blind_spots=blind_spots,
+            coverage_summary=coverage_summary,
+        )
+
+    def _build_similarity_coverage_summary(
+        self,
+        chunks_seen: int,
+        total_chunks: int,
+        coverage_pct: float,
+        doc_count: int,
+    ) -> str:
+        """Build human-readable coverage summary for similarity retrieval."""
+        summary_parts = [
+            f"Retrieved {chunks_seen} most relevant chunks from {total_chunks} total "
+            f"(~{coverage_pct:.0f}% of content) across {doc_count} document(s)."
+        ]
+
+        if coverage_pct < 10:
+            summary_parts.append(
+                "This is a focused retrieval of the most relevant content. "
+                "Claims should be limited to what these specific sources support."
+            )
+        else:
+            summary_parts.append(
+                "Use the retrieved context to ground your response, citing sources."
+            )
+
+        return " ".join(summary_parts)
 
 
 # Singleton instance

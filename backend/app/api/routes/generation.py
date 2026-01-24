@@ -21,15 +21,22 @@ async def generate_draft(request: GenerationRequest) -> GenerationResponse:
     """Generate a document draft based on the provided prompt.
 
     The draft is generated using RAG (Retrieval-Augmented Generation):
-    1. Relevant chunks are retrieved from uploaded documents
-    2. The LLM generates content grounded in the retrieved context
-    3. Each section includes source references and confidence levels
+    1. Intent is detected to determine retrieval strategy
+    2. Relevant chunks are retrieved (similarity or diverse sampling)
+    3. Coverage is computed before prompting
+    4. The LLM generates content grounded in the retrieved context
+    5. Each section includes source references and confidence levels
+
+    Intent modes:
+    - ANALYSIS: Uses diverse sampling for representative coverage
+    - QA: Uses similarity search with higher top_k for Q&A
+    - WRITING: Uses standard similarity search for content creation
 
     Args:
-        request: Generation request with prompt and optional document filter
+        request: Generation request with prompt and optional overrides
 
     Returns:
-        Generated sections with sources, confidence, and warnings
+        Generated sections with sources, confidence, coverage, and warnings
     """
     service = get_generation_service()
 
@@ -38,6 +45,9 @@ async def generate_draft(request: GenerationRequest) -> GenerationResponse:
             prompt=request.prompt,
             document_ids=request.document_ids,
             max_sections=request.max_sections,
+            intent_override=request.intent_override,
+            retrieval_type_override=request.retrieval_type_override,
+            escalate_coverage=request.escalate_coverage,
         )
 
         return result.to_response()
