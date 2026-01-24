@@ -36,3 +36,12 @@ export type {
   SuggestedQuestionsRequest,
   SuggestedQuestionsResponse,
 } from './generation';
+
+export type {
+  ChatMessage,
+  ChatRequest,
+  ChatResponse,
+  ChatRole,
+  ContextUsed,
+  Conversation,
+} from './chat';

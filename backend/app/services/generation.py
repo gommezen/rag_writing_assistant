@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from uuid import uuid4
 
 from langchain_ollama import ChatOllama
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from ..config import get_settings
 from ..core import GenerationError, LLMError, get_logger
@@ -516,6 +516,48 @@ class GenerationService:
             SystemMessage(content=system_prompt),
             HumanMessage(content=user_prompt),
         ]
+
+        response = await llm.ainvoke(messages)
+        return response.content, model_name
+
+    async def _generate_with_history(
+        self,
+        system_prompt: str,
+        conversation_history: list[tuple[str, str]],
+        user_prompt: str,
+        intent: QueryIntent | None = None,
+    ) -> tuple[str, str]:
+        """Generate content using the LLM with conversation history.
+
+        Args:
+            system_prompt: System message
+            conversation_history: List of (role, content) tuples from prior turns
+            user_prompt: Current user message
+            intent: Optional query intent for model selection
+
+        Returns:
+            Tuple of (generated text, model name used)
+        """
+        llm, model_name = self._get_llm_for_intent(intent)
+
+        logger.info(
+            "Generating with LLM (with history)",
+            model=model_name,
+            intent=intent.value if intent else "default",
+            history_turns=len(conversation_history),
+            num_ctx=self.settings.ollama_num_ctx,
+        )
+
+        # Build message list: system + history + current user message
+        messages = [SystemMessage(content=system_prompt)]
+
+        for role, content in conversation_history:
+            if role == "user":
+                messages.append(HumanMessage(content=content))
+            elif role == "assistant":
+                messages.append(AIMessage(content=content))
+
+        messages.append(HumanMessage(content=user_prompt))
 
         response = await llm.ainvoke(messages)
         return response.content, model_name

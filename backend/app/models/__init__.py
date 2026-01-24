@@ -38,6 +38,17 @@ from .generation import (
     SuggestedQuestionsRequest,
     SuggestedQuestionsResponse,
 )
+from .chat import (
+    ChatMessage,
+    ChatMessageResponse,
+    ChatRequest,
+    ChatResponse,
+    ChatResult,
+    ChatRole,
+    ContextUsedResponse,
+    Conversation,
+    ConversationResponse,
+)
 
 __all__ = [
     # Common
@@ -75,4 +86,14 @@ __all__ = [
     "SourceReferenceResponse",
     "SuggestedQuestionsRequest",
     "SuggestedQuestionsResponse",
+    # Chat
+    "ChatMessage",
+    "ChatMessageResponse",
+    "ChatRequest",
+    "ChatResponse",
+    "ChatResult",
+    "ChatRole",
+    "ContextUsedResponse",
+    "Conversation",
+    "ConversationResponse",
 ]

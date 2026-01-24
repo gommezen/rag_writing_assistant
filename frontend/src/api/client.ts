@@ -4,6 +4,9 @@
 
 import type {
   ApiError,
+  ChatRequest,
+  ChatResponse,
+  Conversation,
   Document,
   DocumentChunksResponse,
   DocumentListResponse,
@@ -118,6 +121,21 @@ class ApiClient {
       },
       body: JSON.stringify(request),
     });
+  }
+
+  // Chat operations
+  async chat(request: ChatRequest): Promise<ChatResponse> {
+    return this.request('/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(request),
+    });
+  }
+
+  async getConversation(conversationId: string): Promise<Conversation> {
+    return this.request(`/chat/${conversationId}`);
   }
 }
 

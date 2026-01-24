@@ -4,7 +4,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from .api import documents_router, generation_router, health_router
+from .api import chat_router, documents_router, generation_router, health_router
 from .config import get_settings
 from .core import RAGAssistantError, get_logger
 
@@ -53,6 +53,7 @@ async def rag_exception_handler(request: Request, exc: RAGAssistantError) -> JSO
 app.include_router(health_router, prefix="/api")
 app.include_router(documents_router, prefix="/api")
 app.include_router(generation_router, prefix="/api")
+app.include_router(chat_router, prefix="/api")
 
 
 @app.on_event("startup")

@@ -203,6 +203,42 @@ CRITICAL OUTPUT RULES:
 
 Begin writing:"""
 
+    # === CHAT MODE PROMPTS (Multi-turn conversation) ===
+
+    CHAT_SYSTEM_PROMPT = """You are a document analysis assistant engaged in a multi-turn conversation.
+
+CONVERSATION RULES:
+1. Reference prior discussion when relevant ("As mentioned earlier...", "Building on what we discussed...")
+2. Do NOT repeat information already provided unless the user asks
+3. If asked to "expand", "tell me more", or "elaborate", build on prior context
+4. Maintain citation consistency - if you referenced [Source 2] before, continue using that notation
+5. Be conversational but precise - acknowledge the ongoing dialogue
+
+EPISTEMIC RULES (always apply):
+1. Your confidence must not exceed what coverage justifies
+2. Cite sources using [Source N] notation for every claim
+3. Acknowledge what you cannot assess
+4. Distinguish between directly supported claims and reasoned synthesis
+
+Your goal is to have a helpful, grounded conversation about the user's documents."""
+
+    CHAT_USER_PROMPT = """CONVERSATION CONTEXT:
+{conversation_summary}
+
+CUMULATIVE COVERAGE:
+{cumulative_coverage_info}
+
+NEW SOURCES FOR THIS TURN ({num_sources} sources):
+{context}
+
+CONVERSATION HISTORY:
+{conversation_history}
+
+USER'S CURRENT MESSAGE:
+{user_message}
+
+Respond naturally to the user's message, maintaining conversation flow. Cite sources using [Source N] notation:"""
+
 
 def format_context(sources: list[dict]) -> tuple[str, int]:
     """Format retrieved sources into context string.
@@ -473,3 +509,50 @@ def build_focused_summary_prompt(
     )
 
     return PromptTemplates.ANALYSIS_SYSTEM_PROMPT, user_prompt
+
+
+def build_chat_prompt(
+    user_message: str,
+    sources: list[dict],
+    conversation_history: list[tuple[str, str]],
+    cumulative_coverage_info: str,
+) -> tuple[str, str]:
+    """Build prompt for multi-turn chat conversation.
+
+    Args:
+        user_message: The user's current message
+        sources: Retrieved source chunks for this turn
+        conversation_history: List of (role, content) tuples from prior turns
+        cumulative_coverage_info: Summary of coverage across the conversation
+
+    Returns:
+        Tuple of (system_prompt, user_prompt)
+    """
+    context, num_sources = format_context(sources)
+
+    # Format conversation history
+    if conversation_history:
+        history_parts = []
+        for role, content in conversation_history:
+            # Truncate long assistant responses to save context
+            if role == "assistant" and len(content) > 500:
+                content = content[:500] + "... [truncated]"
+            history_parts.append(f"{role.upper()}: {content}")
+        history_text = "\n\n".join(history_parts)
+    else:
+        history_text = "(This is the start of the conversation)"
+
+    # Build conversation summary
+    num_turns = len(conversation_history) // 2 if conversation_history else 0
+    conversation_summary = f"This is turn {num_turns + 1} of the conversation."
+
+    user_prompt = PromptTemplates.CHAT_USER_PROMPT.format(
+        conversation_summary=conversation_summary,
+        cumulative_coverage_info=cumulative_coverage_info,
+        context=context,
+        num_sources=num_sources if num_sources > 0 else 0,
+        conversation_history=history_text,
+        user_message=user_message,
+    )
+
+    return PromptTemplates.CHAT_SYSTEM_PROMPT, user_prompt
