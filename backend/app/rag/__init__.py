@@ -5,6 +5,7 @@ from .embedding import EmbeddingService, get_embedding_service
 from .prompts import (
     PromptTemplates,
     build_analysis_prompt,
+    build_chat_prompt,
     build_coverage_aware_generation_prompt,
     build_exploratory_summary_prompt,
     build_focused_summary_prompt,
@@ -28,6 +29,7 @@ __all__ = [
     # Prompts
     "PromptTemplates",
     "build_analysis_prompt",
+    "build_chat_prompt",
     "build_coverage_aware_generation_prompt",
     "build_exploratory_summary_prompt",
     "build_focused_summary_prompt",

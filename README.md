@@ -13,6 +13,39 @@ Generate AI-written content grounded in your own documents, with full source tra
 - **Intent detection** - Auto-selects best model and retrieval strategy per query
 - **Fully local** - Documents never leave your machine (runs on Ollama)
 
+## Governance & Transparency
+
+### No Learning From Your Data
+
+RAG does **not** train on your documents. Your files are chunked and indexed for retrieval only—the AI model is never modified. Deleting a document removes it completely.
+
+### Citation Enforcement
+
+Every paragraph must cite sources using `[Source N]` notation. Citations are validated post-generation and mapped back to actual document chunks.
+
+### Coverage Tracking
+
+The system reports what % of your documents it actually analyzed:
+
+- **~8-10%**: Similarity search (Q&A, specific questions)
+- **~35%**: Diverse sampling (summaries, analysis)
+- **~50-60%**: Expanded coverage (deep analysis)
+
+A summary based on 8% is different from 35%—the UI shows this with color-coded indicators and an "Expand coverage" option.
+
+### Confidence Levels
+
+| Level | Criteria |
+|-------|----------|
+| HIGH | 3+ citations |
+| MEDIUM | 1-2 citations |
+| LOW | Hedging language detected |
+| UNKNOWN | 0 citations |
+
+### Blind Spot Detection
+
+The system reports what it **didn't** see—documents with no coverage, regions (intro/middle/conclusion) that weren't sampled. This prevents false confidence from partial reads.
+
 ## Quick Start
 
 1. **Install Ollama** from [ollama.ai](https://ollama.ai/)

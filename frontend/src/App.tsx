@@ -8,10 +8,11 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Sun, Moon, ChevronLeft, ChevronRight, Download, Copy, Check, Eye, Lightbulb } from 'lucide-react';
+import { Sun, Moon, ChevronLeft, ChevronRight, Download, Copy, Check, Eye, Lightbulb, MessageSquare, PenTool } from 'lucide-react';
 import { DocumentEditor } from './components/DocumentEditor';
 import { DocumentPreview } from './components/DocumentPreview';
 import { WarningBanner } from './components/WarningBanner';
+import { ChatView } from './components/ChatView';
 import {
   useDocuments,
   useDocumentChunks,
@@ -21,11 +22,18 @@ import {
   useGenerateDraft,
   useRegenerateSection,
   useSuggestedQuestions,
+  useChat,
 } from './hooks';
-import type { GeneratedSection, Document, RetrievalMetadata } from './types';
+import type { GeneratedSection, Document, RetrievalMetadata, ChatMessage, CoverageDescriptor, ContextUsed } from './types';
 import './App.css';
 
+type AppMode = 'write' | 'chat';
+
 function App() {
+  // Mode state
+  const [mode, setMode] = useState<AppMode>('write');
+
+  // Write mode state
   const [prompt, setPrompt] = useState('');
   const [sections, setSections] = useState<GeneratedSection[]>([]);
   const [retrievalMetadata, setRetrievalMetadata] = useState<RetrievalMetadata | null>(null);
@@ -42,6 +50,13 @@ function App() {
     const saved = localStorage.getItem('theme');
     return saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
   });
+
+  // Chat mode state
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [cumulativeCoverage, setCumulativeCoverage] = useState<CoverageDescriptor | null>(null);
+  const [lastContextUsed, setLastContextUsed] = useState<ContextUsed | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const promptTextareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -70,6 +85,7 @@ function App() {
   const generateMutation = useGenerateDraft();
   const regenerateMutation = useRegenerateSection();
   const suggestionsMutation = useSuggestedQuestions();
+  const chatMutation = useChat();
 
   // Document preview
   const { data: chunksData, isLoading: isLoadingChunks } = useDocumentChunks(previewDocumentId);
@@ -276,18 +292,97 @@ function App() {
     setTimeout(() => setPromptHighlighted(false), 1500);
   }, []);
 
+  // Handle chat message
+  const handleChatMessage = useCallback(async (message: string) => {
+    try {
+      // Optimistically add user message to UI
+      const tempUserMessage: ChatMessage = {
+        message_id: `temp-${Date.now()}`,
+        role: 'user',
+        content: message,
+        timestamp: new Date().toISOString(),
+        sources_used: [],
+      };
+      setChatMessages((prev) => [...prev, tempUserMessage]);
+
+      const request = conversationId
+        ? { conversation_id: conversationId, message }
+        : { message };
+      const result = await chatMutation.mutateAsync(request);
+
+      // Update state with response
+      setConversationId(result.conversation_id);
+      setCumulativeCoverage(result.cumulative_coverage);
+      setLastContextUsed(result.context_used);
+
+      // Replace temp user message with real one and add assistant message
+      setChatMessages((prev) => {
+        // Find the temp message and keep everything before it
+        const withoutTemp = prev.filter((m) => m.message_id !== tempUserMessage.message_id);
+        // Add the user message from the response context and the assistant response
+        return [
+          ...withoutTemp,
+          {
+            message_id: `user-${Date.now()}`,
+            role: 'user' as const,
+            content: message,
+            timestamp: new Date().toISOString(),
+            sources_used: [],
+          },
+          result.message,
+        ];
+      });
+    } catch (error) {
+      console.error('Chat failed:', error);
+      // Remove temp message on error
+      setChatMessages((prev) => prev.filter((m) => !m.message_id.startsWith('temp-')));
+      setGlobalWarnings([`Chat failed: ${error instanceof Error ? error.message : 'Unknown error'}`]);
+    }
+  }, [conversationId, chatMutation]);
+
+  // Handle starting a new chat
+  const handleNewChat = useCallback(() => {
+    setConversationId(null);
+    setChatMessages([]);
+    setCumulativeCoverage(null);
+    setLastContextUsed(null);
+  }, []);
+
   return (
     <div className="app">
       <header className="app__header">
         <h1 className="app__title">RAG Writing Assistant</h1>
-        <button
-          type="button"
-          className="theme-toggle"
-          onClick={() => setDarkMode((prev) => !prev)}
-          aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-        >
-          {darkMode ? <Sun size={20} /> : <Moon size={20} />}
-        </button>
+        <div className="app__header-controls">
+          {/* Mode Toggle */}
+          <div className="mode-toggle">
+            <button
+              type="button"
+              className={`mode-toggle__btn ${mode === 'write' ? 'mode-toggle__btn--active' : ''}`}
+              onClick={() => setMode('write')}
+              aria-pressed={mode === 'write'}
+            >
+              <PenTool size={16} />
+              Write
+            </button>
+            <button
+              type="button"
+              className={`mode-toggle__btn ${mode === 'chat' ? 'mode-toggle__btn--active' : ''}`}
+              onClick={() => setMode('chat')}
+              aria-pressed={mode === 'chat'}
+            >
+              <MessageSquare size={16} />
+              Chat
+            </button>
+          </div>
+          <button
+            type="button"
+            className="theme-toggle"
+            onClick={() => setDarkMode((prev) => !prev)}
+            aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+          </button>
+        </div>
       </header>
 
       <div className={`app__layout ${sidebarCollapsed ? 'app__layout--collapsed' : ''}`}>
@@ -353,7 +448,7 @@ function App() {
             </div>
 
             {/* Suggested Questions */}
-            {!sidebarCollapsed && documents.length > 0 && (
+            {!sidebarCollapsed && documents.length > 0 && mode === 'write' && (
               <div className="suggestions-section">
                 <div className="suggestions-section__header">
                   <h3 className="suggestions-section__title">Suggested Questions</h3>
@@ -385,84 +480,113 @@ function App() {
                 )}
               </div>
             )}
+
+            {/* New Chat Button (Chat Mode) */}
+            {!sidebarCollapsed && mode === 'chat' && chatMessages.length > 0 && (
+              <div className="new-chat-section">
+                <button
+                  type="button"
+                  className="new-chat-btn"
+                  onClick={handleNewChat}
+                >
+                  <MessageSquare size={16} />
+                  New Chat
+                </button>
+              </div>
+            )}
           </section>
         </aside>
 
         {/* Main Content */}
         <main className="app__main">
-          {/* Prompt Input */}
-          <section className="prompt-section">
-            <label className="prompt-section__label" htmlFor="prompt-input">
-              What would you like to write about?
-            </label>
-            <div className="prompt-section__input-group">
-              <textarea
-                ref={promptTextareaRef}
-                id="prompt-input"
-                className={`prompt-section__textarea${promptHighlighted ? ' prompt-section__textarea--highlighted' : ''}`}
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                placeholder="Enter your writing prompt here..."
-                rows={3}
-              />
-              <button
-                type="button"
-                className="prompt-section__button"
-                onClick={() => handleGenerate(false)}
-                disabled={!prompt.trim() || generateMutation.isPending}
-              >
-                {generateMutation.isPending ? 'Generating...' : 'Generate Draft'}
-              </button>
-            </div>
-          </section>
-
-          {/* Global Warnings */}
-          {globalWarnings.length > 0 && (
-            <WarningBanner warnings={globalWarnings} />
-          )}
-
-          {/* Coverage Stats */}
-          {retrievalMetadata?.coverage && (
-            <CoverageStats
-              metadata={retrievalMetadata}
-              onExpandCoverage={handleExpandCoverage}
-              isExpanding={generateMutation.isPending}
+          {mode === 'chat' ? (
+            /* Chat Mode */
+            <ChatView
+              messages={chatMessages}
+              cumulativeCoverage={cumulativeCoverage}
+              lastContextUsed={lastContextUsed}
+              isLoading={chatMutation.isPending}
+              onSendMessage={handleChatMessage}
+              documentCount={documents.length}
             />
-          )}
+          ) : (
+            /* Write Mode */
+            <>
+              {/* Prompt Input */}
+              <section className="prompt-section">
+                <label className="prompt-section__label" htmlFor="prompt-input">
+                  What would you like to write about?
+                </label>
+                <div className="prompt-section__input-group">
+                  <textarea
+                    ref={promptTextareaRef}
+                    id="prompt-input"
+                    className={`prompt-section__textarea${promptHighlighted ? ' prompt-section__textarea--highlighted' : ''}`}
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                    placeholder="Enter your writing prompt here..."
+                    rows={3}
+                  />
+                  <button
+                    type="button"
+                    className="prompt-section__button"
+                    onClick={() => handleGenerate(false)}
+                    disabled={!prompt.trim() || generateMutation.isPending}
+                  >
+                    {generateMutation.isPending ? 'Generating...' : 'Generate Draft'}
+                  </button>
+                </div>
+              </section>
 
-          {/* Document Editor */}
-          <section className="editor-section">
-            {sections.length > 0 && (
-              <div className="editor-section__header">
-                <button
-                  type="button"
-                  className={`copy-btn ${copied ? 'copy-btn--copied' : ''}`}
-                  onClick={handleCopy}
-                  aria-label="Copy content to clipboard"
-                >
-                  {copied ? <Check size={16} /> : <Copy size={16} />}
-                  <span>{copied ? 'Copied!' : 'Copy'}</span>
-                </button>
-                <button
-                  type="button"
-                  className="export-btn"
-                  onClick={handleExport}
-                  aria-label="Export content as text file"
-                >
-                  <Download size={16} />
-                  <span>Export TXT</span>
-                </button>
-              </div>
-            )}
-            <DocumentEditor
-              sections={sections}
-              onSectionChange={handleSectionChange}
-              onRegenerate={handleRegenerate}
-              onAccept={handleAccept}
-              regeneratingSection={regeneratingSection}
-              acceptedSection={acceptedSection}
-            />
-          </section>
+              {/* Global Warnings */}
+              {globalWarnings.length > 0 && (
+                <WarningBanner warnings={globalWarnings} />
+              )}
+
+              {/* Coverage Stats */}
+              {retrievalMetadata?.coverage && (
+                <CoverageStats
+                  metadata={retrievalMetadata}
+                  onExpandCoverage={handleExpandCoverage}
+                  isExpanding={generateMutation.isPending}
+                />
+              )}
+
+              {/* Document Editor */}
+              <section className="editor-section">
+                {sections.length > 0 && (
+                  <div className="editor-section__header">
+                    <button
+                      type="button"
+                      className={`copy-btn ${copied ? 'copy-btn--copied' : ''}`}
+                      onClick={handleCopy}
+                      aria-label="Copy content to clipboard"
+                    >
+                      {copied ? <Check size={16} /> : <Copy size={16} />}
+                      <span>{copied ? 'Copied!' : 'Copy'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="export-btn"
+                      onClick={handleExport}
+                      aria-label="Export content as text file"
+                    >
+                      <Download size={16} />
+                      <span>Export TXT</span>
+                    </button>
+                  </div>
+                )}
+                <DocumentEditor
+                  sections={sections}
+                  onSectionChange={handleSectionChange}
+                  onRegenerate={handleRegenerate}
+                  onAccept={handleAccept}
+                  regeneratingSection={regeneratingSection}
+                  acceptedSection={acceptedSection}
+                />
+              </section>
+            </>
+          )}
         </main>
       </div>
 

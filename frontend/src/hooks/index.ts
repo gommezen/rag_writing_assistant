@@ -12,3 +12,5 @@ export {
 } from './useDocuments';
 
 export { useGenerateDraft, useRegenerateSection, useSuggestedQuestions } from './useGeneration';
+
+export { useChat, useConversation } from './useChat';

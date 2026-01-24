@@ -173,3 +173,95 @@ export function createMockErrorResponse(
     headers: new Headers({ 'Content-Type': 'application/json' }),
   } as Response;
 }
+
+// ============================================================================
+// Chat Mocks
+// ============================================================================
+
+import type {
+  ChatMessage,
+  ChatResponse,
+  ContextUsed,
+  Conversation,
+} from '../../types';
+
+/**
+ * Create a mock chat message.
+ */
+export function createMockChatMessage(
+  overrides: Partial<ChatMessage> = {}
+): ChatMessage {
+  return {
+    message_id: `msg-${Math.random().toString(36).substr(2, 9)}`,
+    role: 'user',
+    content: 'This is a test message.',
+    timestamp: new Date().toISOString(),
+    sources_used: [],
+    ...overrides,
+  };
+}
+
+/**
+ * Create a mock assistant chat message with sources.
+ */
+export function createMockAssistantMessage(
+  overrides: Partial<ChatMessage> = {}
+): ChatMessage {
+  return createMockChatMessage({
+    role: 'assistant',
+    content: 'Based on [Source 1], here is the response with citations.',
+    sources_used: createMockSources(2),
+    ...overrides,
+  });
+}
+
+/**
+ * Create mock context used info.
+ */
+export function createMockContextUsed(
+  overrides: Partial<ContextUsed> = {}
+): ContextUsed {
+  return {
+    history_messages_count: 4,
+    history_truncated: false,
+    sources_count: 3,
+    ...overrides,
+  };
+}
+
+/**
+ * Create a mock chat response.
+ */
+export function createMockChatResponse(
+  overrides: Partial<ChatResponse> = {}
+): ChatResponse {
+  return {
+    conversation_id: `conv-${Math.random().toString(36).substr(2, 9)}`,
+    message: createMockAssistantMessage(),
+    cumulative_coverage: null,
+    context_used: createMockContextUsed(),
+    generation_time_ms: 850.5,
+    model_used: 'llama3.2',
+    ...overrides,
+  };
+}
+
+/**
+ * Create a mock conversation.
+ */
+export function createMockConversation(
+  overrides: Partial<Conversation> = {}
+): Conversation {
+  return {
+    conversation_id: `conv-${Math.random().toString(36).substr(2, 9)}`,
+    messages: [
+      createMockChatMessage({ role: 'user', content: 'What is this document about?' }),
+      createMockAssistantMessage({ content: 'This document discusses testing methodologies.' }),
+    ],
+    document_ids: null,
+    cumulative_coverage: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    ...overrides,
+  };
+}
