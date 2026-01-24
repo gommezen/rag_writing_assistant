@@ -11,6 +11,49 @@ from dataclasses import dataclass
 class PromptTemplates:
     """Collection of prompt templates for different generation tasks."""
 
+    # === ANALYSIS MODE PROMPTS (Epistemic Guardrails) ===
+
+    ANALYSIS_SYSTEM_PROMPT = """You are a document analysis assistant that helps users understand their documents.
+
+EPISTEMIC RULES (you MUST follow these):
+1. Your confidence must not exceed what coverage justifies
+2. Separate claims (with citations) from interpretations (marked as synthesis)
+3. Surface contradictions without forcing resolution
+4. Acknowledge what you cannot assess
+
+Your goal is intellectual honesty first, usefulness second, polish last."""
+
+    ANALYSIS_PROMPT = """Analyze the following documents based on what you can see.
+
+COVERAGE CONTEXT:
+{coverage_info}
+
+Given this coverage level, provide analysis appropriate to what you can actually see.
+
+CONTEXT ({num_sources} sources available):
+{context}
+
+OUTPUT STRUCTURE (maintain claim-evidence separation):
+
+## Directly Supported Observations
+[Claims backed by evidence - cite with [Source N]. These are grounded in the retrieved content.]
+
+## Synthesized Patterns
+[Interpretations across sources - preface with "Based on available sources..." or "The content suggests..."]
+
+## Tensions or Contradictions
+[Where sources conflict or suggest different conclusions. Do NOT artificially resolve - present both views.]
+
+## Questions Raised
+[What the content raises but doesn't answer. What would you want to investigate further?]
+
+## Blind Spots
+[What you could NOT assess due to coverage limitations. Be specific about what's missing.]
+
+Begin your analysis:"""
+
+    # === STANDARD WRITING MODE PROMPTS ===
+
     SYSTEM_PROMPT = """You are a writing assistant that helps users write through uncertainty and draft professional documents.
 
 CRITICAL RULES:
@@ -74,6 +117,26 @@ Generate questions that:
 4. Would help someone understand or work with this material better
 
 Output ONLY the questions, one per line, numbered 1-{num_questions}. Do not include any other text or explanations:"""
+
+    # === COVERAGE-AWARE QA/WRITING PROMPTS ===
+
+    COVERAGE_AWARE_GENERATION_PROMPT = """Write the following based on the provided context: {topic}
+
+IMPORTANT CONTEXT LIMITATION:
+{coverage_info}
+
+CONTEXT ({num_sources} sources available - cite [Source 1] through [Source {num_sources}]):
+{context}
+
+CRITICAL OUTPUT RULES:
+- Output ONLY the requested content - no preamble or meta-commentary
+- Write in a clear, professional tone
+- MANDATORY: Include [Source N] citations inline after claims
+- ONLY cite sources that exist: [Source 1] through [Source {num_sources}]
+- Every paragraph MUST have at least one citation
+- If context is insufficient, write what you can and note gaps at the end
+
+Begin writing:"""
 
 
 def format_context(sources: list[dict]) -> tuple[str, int]:
@@ -237,3 +300,54 @@ def parse_questions(text: str) -> list[str]:
                 questions.append(question)
 
     return questions
+
+
+def build_analysis_prompt(
+    sources: list[dict],
+    coverage_summary: str,
+) -> tuple[str, str]:
+    """Build prompt for analysis mode with epistemic guardrails.
+
+    Args:
+        sources: Retrieved source chunks
+        coverage_summary: Human-readable coverage description for prompt injection
+
+    Returns:
+        Tuple of (system_prompt, user_prompt)
+    """
+    context, num_sources = format_context(sources)
+
+    user_prompt = PromptTemplates.ANALYSIS_PROMPT.format(
+        coverage_info=coverage_summary,
+        context=context,
+        num_sources=num_sources if num_sources > 0 else 0,
+    )
+
+    return PromptTemplates.ANALYSIS_SYSTEM_PROMPT, user_prompt
+
+
+def build_coverage_aware_generation_prompt(
+    topic: str,
+    sources: list[dict],
+    coverage_summary: str,
+) -> tuple[str, str]:
+    """Build coverage-aware prompt for writing/QA modes.
+
+    Args:
+        topic: The topic to write about
+        sources: Retrieved source chunks
+        coverage_summary: Human-readable coverage description
+
+    Returns:
+        Tuple of (system_prompt, user_prompt)
+    """
+    context, num_sources = format_context(sources)
+
+    user_prompt = PromptTemplates.COVERAGE_AWARE_GENERATION_PROMPT.format(
+        topic=topic,
+        coverage_info=coverage_summary,
+        context=context,
+        num_sources=num_sources if num_sources > 0 else 0,
+    )
+
+    return PromptTemplates.SYSTEM_PROMPT, user_prompt

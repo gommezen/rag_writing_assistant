@@ -413,6 +413,8 @@ def test_client(mock_services):
     import app.services.ingestion as ingestion_module
     import app.services.retrieval as retrieval_module
     import app.services.generation as generation_module
+    import app.services.intent as intent_module
+    import app.services.diverse_retrieval as diverse_retrieval_module
     import app.rag.vectorstore as vectorstore_module
     import app.rag.embedding as embedding_module
 
@@ -420,6 +422,8 @@ def test_client(mock_services):
     ingestion_module._ingestion_service = None
     retrieval_module._retrieval_service = None
     generation_module._generation_service = None
+    intent_module._intent_service = None
+    diverse_retrieval_module._diverse_retrieval_service = None
     vectorstore_module._vector_store = None
     embedding_module._embedding_service = None
 
@@ -432,6 +436,8 @@ def test_client(mock_services):
     ingestion_module._ingestion_service = None
     retrieval_module._retrieval_service = None
     generation_module._generation_service = None
+    intent_module._intent_service = None
+    diverse_retrieval_module._diverse_retrieval_service = None
     vectorstore_module._vector_store = None
     embedding_module._embedding_service = None
 

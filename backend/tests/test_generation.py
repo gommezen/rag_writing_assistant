@@ -275,20 +275,21 @@ class TestConfidenceAssessment:
                         assert confidence == ConfidenceLevel.HIGH
 
     def test_assess_confidence_low_citations(self, mock_settings, mock_embedding_service):
-        """Low citation ratio should yield LOW confidence."""
+        """Low citation count should yield MEDIUM confidence (uses absolute counts, not ratios)."""
         with patch("app.services.generation.get_settings", return_value=mock_settings):
             with patch("app.services.retrieval.get_settings", return_value=mock_settings):
                 with patch("app.services.generation.get_retrieval_service"):
                     with patch("app.services.generation.get_validation_service"):
                         service = GenerationService()
 
+                        # With 1 citation, confidence is MEDIUM (absolute count based)
                         confidence = service._assess_confidence(
                             content="Content [Source 1]",
                             cited_count=1,
                             available_count=10,
                         )
 
-                        assert confidence == ConfidenceLevel.LOW
+                        assert confidence == ConfidenceLevel.MEDIUM
 
     def test_assess_confidence_no_sources(self, mock_settings, mock_embedding_service):
         """No available sources should yield LOW confidence."""

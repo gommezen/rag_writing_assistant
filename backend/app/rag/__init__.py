@@ -4,6 +4,8 @@ from .chunking import DocumentChunker, create_chunker
 from .embedding import EmbeddingService, get_embedding_service
 from .prompts import (
     PromptTemplates,
+    build_analysis_prompt,
+    build_coverage_aware_generation_prompt,
     build_generation_prompt,
     build_regeneration_prompt,
     build_suggested_questions_prompt,
@@ -23,6 +25,8 @@ __all__ = [
     "get_embedding_service",
     # Prompts
     "PromptTemplates",
+    "build_analysis_prompt",
+    "build_coverage_aware_generation_prompt",
     "build_generation_prompt",
     "build_regeneration_prompt",
     "build_suggested_questions_prompt",

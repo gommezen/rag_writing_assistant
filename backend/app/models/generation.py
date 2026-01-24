@@ -9,7 +9,17 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from .common import ConfidenceLevel, GeneratedSection, RetrievalMetadata, SourceReference
+from .common import (
+    ConfidenceLevel,
+    CoverageDescriptor,
+    DocumentRegion,
+    GeneratedSection,
+    IntentClassification,
+    QueryIntent,
+    RetrievalMetadata,
+    RetrievalType,
+    SourceReference,
+)
 
 
 # Pydantic models for API request/response validation
@@ -55,6 +65,68 @@ class GeneratedSectionResponse(BaseModel):
         )
 
 
+class DocumentCoverageResponse(BaseModel):
+    """API response model for document coverage."""
+    document_id: str
+    document_title: str
+    chunks_seen: int
+    chunks_total: int
+    coverage_percentage: float
+    regions_covered: list[str]
+    regions_missing: list[str]
+
+
+class CoverageDescriptorResponse(BaseModel):
+    """API response model for coverage descriptor."""
+    retrieval_type: str
+    chunks_seen: int
+    chunks_total: int
+    coverage_percentage: float
+    document_coverage: dict[str, DocumentCoverageResponse]
+    blind_spots: list[str]
+    coverage_summary: str
+
+    @classmethod
+    def from_dataclass(cls, coverage: CoverageDescriptor) -> "CoverageDescriptorResponse":
+        return cls(
+            retrieval_type=coverage.retrieval_type.value,
+            chunks_seen=coverage.chunks_seen,
+            chunks_total=coverage.chunks_total,
+            coverage_percentage=round(coverage.coverage_percentage, 1),
+            document_coverage={
+                doc_id: DocumentCoverageResponse(
+                    document_id=doc_cov.document_id,
+                    document_title=doc_cov.document_title,
+                    chunks_seen=doc_cov.chunks_seen,
+                    chunks_total=doc_cov.chunks_total,
+                    coverage_percentage=round(doc_cov.coverage_percentage, 1),
+                    regions_covered=[r.value for r in doc_cov.regions_covered],
+                    regions_missing=[r.value for r in doc_cov.regions_missing],
+                )
+                for doc_id, doc_cov in coverage.document_coverage.items()
+            },
+            blind_spots=coverage.blind_spots,
+            coverage_summary=coverage.coverage_summary,
+        )
+
+
+class IntentClassificationResponse(BaseModel):
+    """API response model for intent classification."""
+    intent: str
+    confidence: float
+    reasoning: str
+    suggested_retrieval: str
+
+    @classmethod
+    def from_dataclass(cls, intent: IntentClassification) -> "IntentClassificationResponse":
+        return cls(
+            intent=intent.intent.value,
+            confidence=round(intent.confidence, 2),
+            reasoning=intent.reasoning,
+            suggested_retrieval=intent.suggested_retrieval.value,
+        )
+
+
 class RetrievalMetadataResponse(BaseModel):
     """API response model for retrieval metadata."""
     query: str
@@ -64,6 +136,9 @@ class RetrievalMetadataResponse(BaseModel):
     chunks_above_threshold: int
     retrieval_time_ms: float
     timestamp: str
+    retrieval_type: str = "similarity"
+    coverage: CoverageDescriptorResponse | None = None
+    intent: IntentClassificationResponse | None = None
 
     @classmethod
     def from_dataclass(cls, metadata: RetrievalMetadata) -> "RetrievalMetadataResponse":
@@ -75,6 +150,9 @@ class RetrievalMetadataResponse(BaseModel):
             chunks_above_threshold=metadata.chunks_above_threshold,
             retrieval_time_ms=metadata.retrieval_time_ms,
             timestamp=metadata.timestamp.isoformat(),
+            retrieval_type=metadata.retrieval_type.value,
+            coverage=CoverageDescriptorResponse.from_dataclass(metadata.coverage) if metadata.coverage else None,
+            intent=IntentClassificationResponse.from_dataclass(metadata.intent) if metadata.intent else None,
         )
 
 
@@ -86,6 +164,18 @@ class GenerationRequest(BaseModel):
         description="Specific documents to use. If None, uses all documents.",
     )
     max_sections: int = Field(default=5, ge=1, le=20, description="Maximum sections to generate")
+    intent_override: str | None = Field(
+        default=None,
+        description="Override detected intent. Options: 'analysis', 'qa', 'writing'",
+    )
+    retrieval_type_override: str | None = Field(
+        default=None,
+        description="Override retrieval strategy. Options: 'similarity', 'diverse'",
+    )
+    escalate_coverage: bool = Field(
+        default=False,
+        description="Increase chunk sampling for more comprehensive coverage",
+    )
 
     model_config = {"extra": "forbid"}
 

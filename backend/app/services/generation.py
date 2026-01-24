@@ -14,13 +14,19 @@ from ..config import get_settings
 from ..core import GenerationError, LLMError, get_logger
 from ..models import (
     ConfidenceLevel,
+    CoverageDescriptor,
     GeneratedSection,
     GenerationResult,
+    IntentClassification,
+    QueryIntent,
     RegenerationResult,
+    RetrievalType,
     SourceReference,
     SuggestedQuestionsResponse,
 )
 from ..rag import (
+    build_analysis_prompt,
+    build_coverage_aware_generation_prompt,
     build_generation_prompt,
     build_regeneration_prompt,
     build_suggested_questions_prompt,
@@ -28,6 +34,8 @@ from ..rag import (
     parse_questions,
     sanitize_citations,
 )
+from .diverse_retrieval import get_diverse_retrieval_service
+from .intent import get_intent_service
 from .retrieval import get_retrieval_service
 from .validation import get_validation_service
 
@@ -41,6 +49,8 @@ class GenerationService:
         """Initialize generation service."""
         self.settings = get_settings()
         self.retrieval_service = get_retrieval_service()
+        self.diverse_retrieval_service = get_diverse_retrieval_service()
+        self.intent_service = get_intent_service()
         self.validation_service = get_validation_service()
         self._llm: ChatOllama | None = None
 
@@ -60,13 +70,23 @@ class GenerationService:
         prompt: str,
         document_ids: list[str] | None = None,
         max_sections: int = 5,
+        intent_override: str | None = None,
+        retrieval_type_override: str | None = None,
+        escalate_coverage: bool = False,
     ) -> GenerationResult:
         """Generate a document draft based on prompt and retrieved context.
+
+        Uses intent detection to determine retrieval strategy:
+        - ANALYSIS: Diverse sampling for representative coverage
+        - QA/WRITING: Similarity search for relevant context
 
         Args:
             prompt: The writing prompt/topic
             document_ids: Optional list of document IDs to use
             max_sections: Maximum number of sections to generate
+            intent_override: Override detected intent ('analysis', 'qa', 'writing')
+            retrieval_type_override: Override retrieval strategy ('similarity', 'diverse')
+            escalate_coverage: Increase chunk sampling for more coverage
 
         Returns:
             GenerationResult with sections, sources, and metadata
@@ -74,19 +94,52 @@ class GenerationService:
         start_time = time.time()
         generation_id = str(uuid4())
 
+        # Step 1: Detect intent (or use override)
+        if intent_override:
+            intent = self._parse_intent_override(intent_override)
+        else:
+            intent = self.intent_service.detect_intent(prompt)
+
+        # Step 2: Determine retrieval type
+        if retrieval_type_override:
+            retrieval_type = self._parse_retrieval_override(retrieval_type_override)
+        else:
+            retrieval_type = intent.suggested_retrieval
+
         logger.audit(
             action="generation_started",
             resource_type="generation",
             resource_id=generation_id,
             prompt_length=len(prompt),
             document_filter=document_ids,
+            detected_intent=intent.intent.value,
+            retrieval_type=retrieval_type.value,
         )
 
-        # Retrieve relevant context
-        sources, retrieval_metadata = self.retrieval_service.retrieve(
-            query=prompt,
-            document_ids=document_ids,
-        )
+        # Step 3: Retrieve context based on strategy
+        if retrieval_type == RetrievalType.DIVERSE:
+            sources, retrieval_metadata, coverage = self.diverse_retrieval_service.retrieve_diverse(
+                document_ids=document_ids,
+                target_chunks=30,
+                escalate=escalate_coverage,
+            )
+            retrieval_metadata.intent = intent
+        else:
+            # Similarity-based retrieval (existing behavior)
+            top_k = 20 if intent.intent == QueryIntent.QA else None  # Higher top_k for QA
+            sources, retrieval_metadata = self.retrieval_service.retrieve(
+                query=prompt,
+                document_ids=document_ids,
+                top_k=top_k,
+            )
+            # Compute coverage AFTER retrieval
+            coverage = self.retrieval_service.compute_similarity_coverage(
+                sources=sources,
+                document_ids=document_ids,
+            )
+            retrieval_metadata.retrieval_type = retrieval_type
+            retrieval_metadata.coverage = coverage
+            retrieval_metadata.intent = intent
 
         # Check if we have enough context
         warnings = self.validation_service.check_retrieval_quality(sources)
@@ -100,10 +153,19 @@ class GenerationService:
             for source in sources
         ]
 
-        system_prompt, user_prompt = build_generation_prompt(
-            topic=prompt,
-            sources=source_dicts,
-        )
+        # Step 4: Choose prompt based on intent
+        if intent.intent == QueryIntent.ANALYSIS:
+            system_prompt, user_prompt = build_analysis_prompt(
+                sources=source_dicts,
+                coverage_summary=coverage.coverage_summary,
+            )
+        else:
+            # For QA and WRITING, use coverage-aware generation prompt
+            system_prompt, user_prompt = build_coverage_aware_generation_prompt(
+                topic=prompt,
+                sources=source_dicts,
+                coverage_summary=coverage.coverage_summary,
+            )
 
         # Generate content
         try:
@@ -134,6 +196,13 @@ class GenerationService:
             )
             section.warnings.extend(section_warnings)
 
+            # Add epistemic warnings for analysis mode with low coverage
+            if intent.intent == QueryIntent.ANALYSIS and coverage.coverage_percentage < 20:
+                section.warnings.append(
+                    f"Analysis based on ~{coverage.coverage_percentage:.0f}% document coverage - "
+                    "treat conclusions as exploratory"
+                )
+
         generation_time_ms = (time.time() - start_time) * 1000
 
         result = GenerationResult(
@@ -153,9 +222,39 @@ class GenerationService:
             sections_count=len(sections),
             sources_used=result.total_sources_used,
             generation_time_ms=generation_time_ms,
+            intent=intent.intent.value,
+            coverage_percentage=round(coverage.coverage_percentage, 1),
         )
 
         return result
+
+    def _parse_intent_override(self, override: str) -> IntentClassification:
+        """Parse intent override string into IntentClassification."""
+        intent_map = {
+            "analysis": QueryIntent.ANALYSIS,
+            "qa": QueryIntent.QA,
+            "writing": QueryIntent.WRITING,
+        }
+        intent = intent_map.get(override.lower(), QueryIntent.WRITING)
+
+        retrieval_map = {
+            QueryIntent.ANALYSIS: RetrievalType.DIVERSE,
+            QueryIntent.QA: RetrievalType.SIMILARITY,
+            QueryIntent.WRITING: RetrievalType.SIMILARITY,
+        }
+
+        return IntentClassification(
+            intent=intent,
+            confidence=1.0,
+            reasoning=f"User override: {override}",
+            suggested_retrieval=retrieval_map[intent],
+        )
+
+    def _parse_retrieval_override(self, override: str) -> RetrievalType:
+        """Parse retrieval type override string."""
+        if override.lower() == "diverse":
+            return RetrievalType.DIVERSE
+        return RetrievalType.SIMILARITY
 
     async def regenerate_section(
         self,
