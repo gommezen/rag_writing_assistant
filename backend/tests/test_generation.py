@@ -47,7 +47,7 @@ class TestGenerationServiceBasics:
 
                                 with patch("app.services.generation.get_validation_service"):
                                     service = GenerationService()
-                                    service._llm = mock_llm
+                                    service._llm_cache[mock_settings.generation_model] = mock_llm
 
                                     result = await service.generate(
                                         prompt="Write about testing",
@@ -89,7 +89,7 @@ class TestGenerationServiceBasics:
 
                                 with patch("app.services.generation.get_validation_service"):
                                     service = GenerationService()
-                                    service._llm = mock_llm
+                                    service._llm_cache[mock_settings.generation_model] = mock_llm
 
                                     result = await service.generate(
                                         prompt="Write content",
@@ -122,7 +122,7 @@ class TestGenerationServiceBasics:
 
                                 with patch("app.services.generation.get_validation_service"):
                                     service = GenerationService()
-                                    service._llm = mock_llm
+                                    service._llm_cache[mock_settings.generation_model] = mock_llm
 
                                     result = await service.generate(
                                         prompt="Write content",
@@ -169,7 +169,7 @@ class TestGenerationWithNoSources:
                                     mock_val.return_value = mock_validation
 
                                     service = GenerationService()
-                                    service._llm = mock_llm
+                                    service._llm_cache[mock_settings.generation_model] = mock_llm
 
                                     result = await service.generate(
                                         prompt="Write about unknown topic",
@@ -212,7 +212,7 @@ class TestGenerationErrors:
 
                                 with patch("app.services.generation.get_validation_service"):
                                     service = GenerationService()
-                                    service._llm = failing_llm
+                                    service._llm_cache[mock_settings.generation_model] = failing_llm
 
                                     with pytest.raises(LLMError):
                                         await service.generate(
@@ -353,7 +353,7 @@ class TestRegenerateSection:
 
                                 with patch("app.services.generation.get_validation_service"):
                                     service = GenerationService()
-                                    service._llm = mock_llm
+                                    service._llm_cache[mock_settings.generation_model] = mock_llm
 
                                     result = await service.regenerate_section(
                                         section_id="original-section-id",
@@ -385,7 +385,7 @@ class TestRegenerateSection:
 
                                 with patch("app.services.generation.get_validation_service"):
                                     service = GenerationService()
-                                    service._llm = mock_llm
+                                    service._llm_cache[mock_settings.generation_model] = mock_llm
 
                                     result = await service.regenerate_section(
                                         section_id="section-1",

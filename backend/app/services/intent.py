@@ -46,6 +46,8 @@ class IntentPattern:
 # Intent detection patterns ordered by specificity
 ANALYSIS_PATTERNS = IntentPattern(
     patterns=[
+        # High-priority: "write a summary" should be ANALYSIS, not WRITING
+        r"\b(write|draft|create)\s+(a\s+)?(summary|overview|analysis)\b",
         r"\b(summarize|summary|summarise)\b",
         r"\b(overview|overviews)\b",
         r"\b(main\s+points?|key\s+points?)\b",
@@ -60,10 +62,12 @@ ANALYSIS_PATTERNS = IntentPattern(
         r"\b(go\s+deeper|more\s+detail|elaborate|expand)\s+on\b",
         r"\b(focus\s+on)\b",
         r"\bwhat\s+does\s+(it|the\s+document)\s+say\s+about\b",
+        # Document-level analysis
+        r"\b(about\s+this\s+document|of\s+this\s+document)\b",
     ],
     intent=QueryIntent.ANALYSIS,
     retrieval_type=RetrievalType.DIVERSE,
-    confidence_boost=0.15,  # Higher boost for analysis to win over QA when both match
+    confidence_boost=0.20,  # Higher boost for analysis to win over WRITING when both match
 )
 
 QA_PATTERNS = IntentPattern(
@@ -97,11 +101,15 @@ class IntentService:
     """Service for detecting user query intent."""
 
     def __init__(self):
-        """Initialize intent service with compiled patterns."""
+        """Initialize intent service with compiled patterns.
+
+        Order matters: ANALYSIS checked first so 'write a summary'
+        is detected as analysis, not writing.
+        """
         self._patterns = [
-            (WRITING_PATTERNS, self._compile_patterns(WRITING_PATTERNS)),
             (ANALYSIS_PATTERNS, self._compile_patterns(ANALYSIS_PATTERNS)),
             (QA_PATTERNS, self._compile_patterns(QA_PATTERNS)),
+            (WRITING_PATTERNS, self._compile_patterns(WRITING_PATTERNS)),
         ]
         # Compile focused summary patterns
         self._focused_patterns = [

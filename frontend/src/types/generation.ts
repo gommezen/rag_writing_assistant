@@ -17,6 +17,9 @@ export interface GenerationRequest {
   prompt: string;
   document_ids?: string[];
   max_sections?: number;
+  intent_override?: 'analysis' | 'qa' | 'writing';
+  retrieval_type_override?: 'similarity' | 'diverse';
+  escalate_coverage?: boolean;
 }
 
 export interface GenerationResponse {

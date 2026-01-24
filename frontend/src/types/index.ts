@@ -5,8 +5,14 @@
 export type {
   ApiError,
   ConfidenceLevel,
+  CoverageDescriptor,
+  DocumentCoverage,
+  IntentClassification,
+  QueryIntent,
   RetrievalMetadata,
+  RetrievalType,
   SourceReference,
+  SummaryScope,
 } from './common';
 
 export type {

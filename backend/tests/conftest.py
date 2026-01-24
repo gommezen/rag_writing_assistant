@@ -138,6 +138,11 @@ def mock_settings(temp_data_dir: Path) -> Settings:
         ollama_base_url="http://localhost:11434",
         embedding_model="nomic-embed-text",
         generation_model="llama3.2",
+        # Intent-specific models (all using same mock model for tests)
+        analysis_model="llama3.2",
+        writing_model="llama3.2",
+        qa_model="llama3.2",
+        ollama_num_ctx=8192,
         chunk_size=100,
         chunk_overlap=20,
         similarity_threshold=0.5,

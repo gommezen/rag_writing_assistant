@@ -2,6 +2,52 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.1] - 2026-01-24
+
+### Added
+
+#### Frontend
+- **Coverage Stats Display**: New UI component showing document coverage after generation
+  - Coverage percentage with color-coded indicator (green ≥40%, yellow 20-40%, red <20%)
+  - Chunks analyzed vs total chunks
+  - Retrieval type (diverse/similarity)
+  - Intent mode badge (ANALYSIS/QA/WRITING)
+  - Blind spots list (if any regions weren't covered)
+
+- **Expand Coverage Button**: "↑ Expand to ~50%" button in coverage stats
+  - Only appears when coverage <50% and using diverse retrieval
+  - Triggers `escalate_coverage` parameter for deeper analysis
+  - Re-generates with 15% additional coverage
+
+#### Backend
+- **Coverage-Based Retrieval**: Diverse retrieval now targets coverage percentage instead of fixed chunk count
+  - `target_coverage_pct` parameter (default: 35%)
+  - Dynamically calculates chunks needed based on document size
+  - Escalation adds 15% coverage (up to 60% max)
+
+- **Intent-Specific Model Selection**: Generation uses different models per intent
+  - ANALYSIS: `llama3.1:8b-instruct-q8_0` (higher quality reasoning)
+  - WRITING: `qwen2.5:7b-instruct-q4_0` (good prose quality)
+  - QA: `gemma3:4b` (fast responses)
+
+- **Improved Intent Detection**: Better pattern matching for summary requests
+  - "write a summary" now correctly triggers ANALYSIS mode (not WRITING)
+  - "of this document" triggers ANALYSIS mode
+  - ANALYSIS patterns checked before WRITING to prevent false matches
+  - Higher confidence boost for ANALYSIS (0.20 vs 0.15)
+
+#### Configuration
+- `DEFAULT_COVERAGE_PCT`: Target coverage for diverse retrieval (default: 35%)
+- `MAX_COVERAGE_PCT`: Maximum coverage with escalation (default: 60%)
+- `ANALYSIS_MODEL`, `WRITING_MODEL`, `QA_MODEL`: Intent-specific model overrides
+
+### Changed
+- Diverse retrieval now uses percentage-based targeting instead of fixed 30 chunks
+- Intent detection order changed: ANALYSIS → QA → WRITING (was WRITING first)
+- Frontend types updated with full coverage and intent type definitions
+
+---
+
 ## [0.2.0] - 2026-01-24
 
 ### Added

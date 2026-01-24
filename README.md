@@ -9,6 +9,8 @@ Generate AI-written content grounded in your own documents, with full source tra
 - **Source citations** - Every claim traced back to retrieved documents
 - **Confidence indicators** - Visual cues for high/medium/low confidence content
 - **Section-level editing** - Regenerate or manually edit individual sections
+- **Coverage transparency** - See exactly what % of your documents were analyzed
+- **Intent detection** - Auto-selects best model and retrieval strategy per query
 - **Fully local** - Documents never leave your machine (runs on Ollama)
 
 ## Quick Start
@@ -52,20 +54,58 @@ Create `backend/.env` to customize:
 GENERATION_MODEL=qwen2.5:7b-instruct-q4_0
 EMBEDDING_MODEL=mxbai-embed-large
 
+# Intent-specific models (optional - uses GENERATION_MODEL as fallback)
+ANALYSIS_MODEL=llama3.1:8b-instruct-q8_0   # Deep analysis, summaries
+WRITING_MODEL=qwen2.5:7b-instruct-q4_0     # Content generation
+QA_MODEL=gemma3:4b                          # Quick Q&A responses
+
 # Retrieval settings
 SIMILARITY_THRESHOLD=0.35
 TOP_K=10
 
+# Coverage settings (for analysis/summary mode)
+DEFAULT_COVERAGE_PCT=35                 # Target coverage for summaries
+MAX_COVERAGE_PCT=60                     # Max coverage with escalation
+
 # Ollama connection
 OLLAMA_BASE_URL=http://localhost:11434
 ```
+
+### Intent Detection & Coverage
+
+The system automatically detects query intent and adjusts behavior:
+
+| Query Type | Intent | Retrieval | Coverage |
+|------------|--------|-----------|----------|
+| "Summarize this document" | ANALYSIS | Diverse (regions) | ~35% |
+| "Write a summary about X" | ANALYSIS | Diverse (regions) | ~35% |
+| "What is data feminism?" | QA | Similarity | Top-k matches |
+| "Write a report on X" | WRITING | Similarity | Top-k matches |
+
+**Coverage Display**: After generation, the UI shows:
+- Coverage percentage with color indicator (green ≥40%, yellow 20-40%, red <20%)
+- Chunks analyzed vs total chunks
+- Retrieval type (diverse/similarity)
+- Intent mode (ANALYSIS/QA/WRITING)
+- "Expand to ~50%" button for deeper analysis
+
+### Intent-Specific Models
+
+The system automatically selects the best model based on query intent:
+
+| Intent | Default Model | Use Case |
+|--------|---------------|----------|
+| Analysis | `llama3.1:8b-instruct-q8_0` | Summaries, deep analysis |
+| Writing | `qwen2.5:7b-instruct-q4_0` | Content generation, reports |
+| Q&A | `gemma3:4b` | Quick factual questions |
 
 ### Alternative Models
 
 | Model | Use Case | Notes |
 |-------|----------|-------|
 | `qwen2.5:7b-instruct-q4_0` | Generation (default) | Good prose quality, fast |
-| `llama3.1:8b-instruct-q5_K_M` | Generation | Better reasoning, needs more RAM |
+| `llama3.1:8b-instruct-q8_0` | Analysis | Higher quality reasoning |
+| `gemma3:4b` | Q&A | Very fast for simple queries |
 | `mxbai-embed-large` | Embeddings (default) | High quality retrieval |
 
 ## Project Structure
