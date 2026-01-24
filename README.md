@@ -4,7 +4,7 @@ Generate AI-written content grounded in your own documents, with full source tra
 
 ## Features
 
-- **Document upload** - PDF, DOCX, and TXT with drag-and-drop support
+- **Document upload** - PDF, DOCX, and TXT with drag-and-drop support (non-blocking)
 - **Grounded generation** - AI content derived from your uploaded materials
 - **Source citations** - Every claim traced back to retrieved documents
 - **Confidence indicators** - Visual cues for high/medium/low confidence content
@@ -92,13 +92,29 @@ frontend/
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/documents` | POST | Upload document |
+| `/api/documents` | POST | Upload document (returns immediately, poll for status) |
 | `/api/documents` | GET | List documents |
-| `/api/documents/{id}` | GET | Get document |
+| `/api/documents/{id}` | GET | Get document (use for polling status) |
 | `/api/documents/{id}` | DELETE | Delete document |
 | `/api/generate` | POST | Generate draft |
 | `/api/generate/section` | POST | Regenerate section |
 | `/api/health` | GET | Health check |
+
+### Document Upload Flow
+
+Uploads are non-blocking. The endpoint returns immediately with `status: "pending"`:
+
+```bash
+# 1. Upload returns immediately
+curl -X POST http://localhost:8000/api/documents -F "file=@document.pdf"
+# Response: {"document_id": "abc123", "status": "pending", ...}
+
+# 2. Poll for completion
+curl http://localhost:8000/api/documents/abc123
+# Response: {"status": "processing", ...} then {"status": "ready", ...}
+```
+
+Status lifecycle: `pending` → `processing` → `ready` (or `failed`)
 
 ## Development
 
