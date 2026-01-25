@@ -457,7 +457,39 @@ function App() {
   return (
     <div className="app">
       <header className="app__header">
-        <h1 className="app__title">RAG Writing Assistant</h1>
+        <div className="app__title-container">
+          {/* Owl Mascot */}
+          <div className="app__mascot">
+            <svg className="app__mascot-svg" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+              {/* Face outline - shield shape */}
+              <path
+                d="M32 4C32 4 12 8 8 20C4 32 8 44 16 52C24 60 32 60 32 60C32 60 40 60 48 52C56 44 60 32 56 20C52 8 32 4 32 4Z"
+                fill={darkMode ? '#fafafa' : '#1a1a1a'}
+                stroke={darkMode ? '#fafafa' : '#1a1a1a'}
+                strokeWidth="2"
+              />
+              {/* Ear tufts */}
+              <path d="M12 18L8 4L20 14Z" fill={darkMode ? '#fafafa' : '#1a1a1a'} />
+              <path d="M52 18L56 4L44 14Z" fill={darkMode ? '#fafafa' : '#1a1a1a'} />
+              {/* Inner face */}
+              <path
+                d="M32 12C32 12 18 16 16 26C14 36 18 44 24 50C28 54 32 54 32 54C32 54 36 54 40 50C46 44 50 36 48 26C46 16 32 12 32 12Z"
+                fill={darkMode ? '#0a0a0a' : '#ffffff'}
+              />
+              {/* Eyes - outer */}
+              <ellipse cx="24" cy="30" rx="7" ry="8" fill={darkMode ? '#fafafa' : '#1a1a1a'} />
+              <ellipse cx="40" cy="30" rx="7" ry="8" fill={darkMode ? '#fafafa' : '#1a1a1a'} />
+              {/* Eyes - inner (animated) */}
+              <ellipse className="owl-eye" cx="24" cy="30" rx="3" ry="4" fill={darkMode ? '#0a0a0a' : '#ffffff'} style={{ transformOrigin: '24px 30px' }} />
+              <ellipse className="owl-eye" cx="40" cy="30" rx="3" ry="4" fill={darkMode ? '#0a0a0a' : '#ffffff'} style={{ transformOrigin: '40px 30px' }} />
+              {/* Brow - V shape connecting eyes */}
+              <path d="M17 24L32 20L47 24" stroke={darkMode ? '#fafafa' : '#1a1a1a'} strokeWidth="2.5" fill="none" strokeLinecap="round" />
+              {/* Beak */}
+              <path d="M32 38L28 44L32 48L36 44Z" fill={darkMode ? '#0d9488' : '#0d9488'} />
+            </svg>
+          </div>
+          <h1 className="app__title">RAG Writing Assistant</h1>
+        </div>
         <div className="app__header-controls">
           {/* Mode Toggle */}
           <div className="mode-toggle">

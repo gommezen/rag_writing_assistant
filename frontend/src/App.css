@@ -21,10 +21,55 @@
 }
 
 [data-theme="dark"] .app__title {
-  background: linear-gradient(135deg, #38bdf8, #a78bfa);
+  background: linear-gradient(135deg, #0d9488, #14b8a6);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+/* App Title Container with Mascot */
+.app__title-container {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+/* Owl Mascot */
+.app__mascot {
+  width: 36px;
+  height: 36px;
+  animation: owl-bob 4s ease-in-out infinite;
+}
+
+.app__mascot-svg {
+  width: 100%;
+  height: 100%;
+}
+
+@keyframes owl-bob {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-2px) rotate(-2deg);
+  }
+  75% {
+    transform: translateY(-2px) rotate(2deg);
+  }
+}
+
+/* Owl blink animation */
+.owl-eye {
+  animation: owl-blink 5s ease-in-out infinite;
+}
+
+@keyframes owl-blink {
+  0%, 42%, 48%, 100% {
+    transform: scaleY(1);
+  }
+  45% {
+    transform: scaleY(0.1);
+  }
 }
 
 /* Header Controls */
@@ -585,11 +630,11 @@
 
 .mode-option--selected {
   border-color: var(--color-primary);
-  background: rgba(56, 189, 248, 0.1);
+  background: rgba(13, 148, 136, 0.1);
 }
 
 [data-theme="light"] .mode-option--selected {
-  background: rgba(37, 99, 235, 0.1);
+  background: rgba(15, 118, 110, 0.1);
 }
 
 .mode-option__header {
@@ -641,7 +686,7 @@
 }
 
 [data-theme="dark"] .prompt-section__textarea:focus {
-  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+  box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.2);
 }
 
 .prompt-section__textarea--highlighted,
@@ -673,12 +718,12 @@
 }
 
 [data-theme="dark"] .prompt-section__button {
-  color: #0f172a;
+  color: #0a0a0a;
   font-weight: 600;
 }
 
 [data-theme="dark"] .prompt-section__button:hover:not(:disabled) {
-  box-shadow: 0 0 20px rgba(56, 189, 248, 0.4);
+  box-shadow: 0 0 20px rgba(13, 148, 136, 0.4);
 }
 
 .prompt-section__button:disabled {
@@ -725,7 +770,7 @@
 }
 
 [data-theme="dark"] .export-btn:hover {
-  box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
+  box-shadow: 0 0 10px rgba(13, 148, 136, 0.2);
 }
 
 /* Discuss in Chat Button */
@@ -759,11 +804,11 @@
 }
 
 [data-theme="dark"] .discuss-btn {
-  color: #0f172a;
+  color: #0a0a0a;
 }
 
 [data-theme="dark"] .discuss-btn:hover:not(:disabled) {
-  box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
+  box-shadow: 0 0 12px rgba(13, 148, 136, 0.4);
 }
 
 /* Copy Button */
@@ -803,7 +848,7 @@
 }
 
 [data-theme="dark"] .copy-btn:hover {
-  box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
+  box-shadow: 0 0 10px rgba(13, 148, 136, 0.2);
 }
 
 [data-theme="dark"] .copy-btn--copied {
@@ -892,7 +937,7 @@
 }
 
 [data-theme="dark"] .suggestions-list__button:hover {
-  box-shadow: 0 0 8px rgba(56, 189, 248, 0.15);
+  box-shadow: 0 0 8px rgba(13, 148, 136, 0.15);
 }
 
 /* New Chat Section */
