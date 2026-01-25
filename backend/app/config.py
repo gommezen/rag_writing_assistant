@@ -20,7 +20,7 @@ class Settings(BaseSettings):
 
     # Ollama LLM settings
     ollama_base_url: str = "http://localhost:11434"
-    embedding_model: str = "mxbai-embed-large"
+    embedding_model: str = "bge-m3"  # Upgraded from mxbai-embed-large
     generation_model: str = "qwen2.5:7b-instruct-q4_0"  # Default/fallback model
 
     # Context window (reduced for faster generation, lower VRAM)
@@ -36,6 +36,21 @@ class Settings(BaseSettings):
     chunk_overlap: int = 100
     similarity_threshold: float = 0.35
     top_k_retrieval: int = 10
+
+    # Intent-specific similarity thresholds
+    qa_similarity_threshold: float = 0.50      # QA needs precise matches
+    analysis_similarity_threshold: float = 0.25  # Analysis needs broad coverage
+    writing_similarity_threshold: float = 0.35   # Writing is balanced
+
+    # Reranker settings
+    reranker_enabled: bool = True
+    reranker_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    reranker_initial_k: int = 20  # Retrieve more chunks for reranking
+
+    # Confidence-based model routing
+    fast_model: str = "gemma3:4b"                    # HIGH confidence retrieval
+    standard_model: str = "qwen2.5:7b-instruct-q4_0"  # MEDIUM confidence retrieval
+    quality_model: str = "llama3.1:8b-instruct-q4_0"  # LOW confidence retrieval
 
     # Coverage settings for analysis mode
     default_coverage_pct: float = 35.0    # Target coverage for diverse retrieval

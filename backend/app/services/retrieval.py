@@ -15,11 +15,13 @@ from ..models import (
     DocumentChunk,
     DocumentCoverage,
     DocumentRegion,
+    QueryIntent,
     RetrievalMetadata,
     RetrievalType,
     SourceReference,
 )
 from ..rag import get_vector_store
+from .reranker import get_reranker_service
 
 logger = get_logger(__name__)
 
@@ -31,6 +33,30 @@ class RetrievalService:
         """Initialize retrieval service."""
         self.settings = get_settings()
         self.vector_store = get_vector_store()
+        self._reranker = None
+
+    @property
+    def reranker(self):
+        """Lazy-load reranker service."""
+        if self._reranker is None and self.settings.reranker_enabled:
+            self._reranker = get_reranker_service()
+        return self._reranker
+
+    def _get_threshold_for_intent(self, intent: QueryIntent | None) -> float:
+        """Select similarity threshold based on query intent.
+
+        Different intents have different precision/recall trade-offs:
+        - QA: High threshold (0.50) for precise matches
+        - ANALYSIS: Low threshold (0.25) for broad coverage
+        - WRITING: Balanced threshold (0.35)
+        """
+        if intent == QueryIntent.QA:
+            return self.settings.qa_similarity_threshold
+        elif intent == QueryIntent.ANALYSIS:
+            return self.settings.analysis_similarity_threshold
+        elif intent == QueryIntent.WRITING:
+            return self.settings.writing_similarity_threshold
+        return self.settings.similarity_threshold
 
     def retrieve(
         self,
@@ -38,30 +64,59 @@ class RetrievalService:
         top_k: int | None = None,
         threshold: float | None = None,
         document_ids: list[str] | None = None,
+        intent: QueryIntent | None = None,
+        use_reranker: bool | None = None,
     ) -> tuple[list[SourceReference], RetrievalMetadata]:
         """Retrieve relevant chunks for a query.
 
         Args:
             query: Search query
             top_k: Number of results to return
-            threshold: Minimum similarity threshold
+            threshold: Minimum similarity threshold (uses intent-specific if not provided)
             document_ids: Optional filter by document IDs
+            intent: Query intent for threshold selection
+            use_reranker: Override reranker setting (defaults to config)
 
         Returns:
             Tuple of (source references, retrieval metadata)
         """
         top_k = top_k or self.settings.top_k_retrieval
-        threshold = threshold if threshold is not None else self.settings.similarity_threshold
+
+        # Use intent-specific threshold if not explicitly provided
+        if threshold is None:
+            threshold = self._get_threshold_for_intent(intent)
+
+        # Determine if reranking is enabled
+        reranker_enabled = use_reranker if use_reranker is not None else self.settings.reranker_enabled
 
         start_time = time.time()
 
-        # Search vector store
+        # If reranking, retrieve more candidates initially
+        initial_k = self.settings.reranker_initial_k if reranker_enabled else top_k
+
+        # Search vector store with lower threshold for reranking
+        search_threshold = threshold * 0.5 if reranker_enabled else threshold
         results = self.vector_store.search(
             query=query,
-            top_k=top_k,
-            threshold=threshold,
+            top_k=initial_k,
+            threshold=search_threshold,
             document_ids=document_ids,
         )
+
+        reranker_used = False
+
+        # Apply reranking if enabled and we have results
+        if reranker_enabled and self.reranker and results:
+            reranker_used = True
+            reranked = self.reranker.rerank(
+                query=query,
+                chunks=results,
+                top_k=top_k,
+            )
+            # Use rerank score as the relevance score
+            results = [(chunk, rerank_score) for chunk, _, rerank_score in reranked]
+            # Filter by threshold on rerank scores
+            results = [(chunk, score) for chunk, score in results if score >= threshold]
 
         retrieval_time_ms = (time.time() - start_time) * 1000
 
@@ -95,6 +150,8 @@ class RetrievalService:
             top_k=top_k,
             threshold=threshold,
             retrieval_time_ms=retrieval_time_ms,
+            intent=intent.value if intent else None,
+            reranker_used=reranker_used,
         )
 
         return sources, metadata

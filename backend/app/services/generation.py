@@ -20,6 +20,8 @@ from ..models import (
     IntentClassification,
     QueryIntent,
     RegenerationResult,
+    RetrievalConfidence,
+    RetrievalConfidenceLevel,
     RetrievalType,
     SourceReference,
     SuggestedQuestionsResponse,
@@ -37,6 +39,7 @@ from ..rag import (
     parse_questions,
     sanitize_citations,
 )
+from .confidence import LOW_CONFIDENCE_SUFFIX, get_confidence_service
 from .diverse_retrieval import get_diverse_retrieval_service
 from .intent import get_intent_service
 from .retrieval import get_retrieval_service
@@ -55,10 +58,14 @@ class GenerationService:
         self.diverse_retrieval_service = get_diverse_retrieval_service()
         self.intent_service = get_intent_service()
         self.validation_service = get_validation_service()
+        self.confidence_service = get_confidence_service()
         self._llm_cache: dict[str, ChatOllama] = {}
 
     def _get_llm_for_intent(self, intent: QueryIntent | None = None) -> tuple[ChatOllama, str]:
         """Get the appropriate LLM based on query intent.
+
+        NOTE: This method is kept for backward compatibility.
+        For new generation, use _get_llm_for_confidence instead.
 
         Args:
             intent: The detected query intent (ANALYSIS, QA, WRITING)
@@ -73,7 +80,37 @@ class GenerationService:
         }
         model = model_map.get(intent, self.settings.generation_model) if intent else self.settings.generation_model
 
-        # Cache LLM instances by model name
+        return self._get_or_create_llm(model), model
+
+    def _get_llm_for_confidence(
+        self,
+        confidence: RetrievalConfidence,
+    ) -> tuple[ChatOllama, str]:
+        """Get the appropriate LLM based on retrieval confidence.
+
+        This implements confidence-based model routing (TAG):
+        - HIGH confidence: Use fast model (gemma3:4b)
+        - MEDIUM confidence: Use standard model (qwen:7b)
+        - LOW confidence: Use quality model (llama:8b)
+
+        Args:
+            confidence: Retrieval confidence assessment
+
+        Returns:
+            Tuple of (ChatOllama instance, model name used)
+        """
+        model = confidence.suggested_model
+        return self._get_or_create_llm(model), model
+
+    def _get_or_create_llm(self, model: str) -> ChatOllama:
+        """Get or create a cached LLM instance.
+
+        Args:
+            model: Model name
+
+        Returns:
+            ChatOllama instance
+        """
         if model not in self._llm_cache:
             self._llm_cache[model] = ChatOllama(
                 model=model,
@@ -87,7 +124,7 @@ class GenerationService:
                 num_ctx=self.settings.ollama_num_ctx,
             )
 
-        return self._llm_cache[model], model
+        return self._llm_cache[model]
 
     @property
     def llm(self) -> ChatOllama:
@@ -157,12 +194,13 @@ class GenerationService:
             )
             retrieval_metadata.intent = intent
         else:
-            # Similarity-based retrieval (existing behavior)
+            # Similarity-based retrieval with intent-specific thresholds and reranking
             top_k = 20 if intent.intent == QueryIntent.QA else None  # Higher top_k for QA
             sources, retrieval_metadata = self.retrieval_service.retrieve(
                 query=prompt,
                 document_ids=document_ids,
                 top_k=top_k,
+                intent=intent.intent,  # Pass intent for threshold selection
             )
             # Compute coverage AFTER retrieval
             coverage = self.retrieval_service.compute_similarity_coverage(
@@ -172,6 +210,9 @@ class GenerationService:
             retrieval_metadata.retrieval_type = retrieval_type
             retrieval_metadata.coverage = coverage
             retrieval_metadata.intent = intent
+
+        # Step 3.5: Compute retrieval confidence for model routing (TAG)
+        retrieval_confidence = self.confidence_service.compute(sources, coverage)
 
         # Check if we have enough context
         warnings = self.validation_service.check_retrieval_quality(sources)
@@ -209,10 +250,14 @@ class GenerationService:
                 coverage_summary=coverage.coverage_summary,
             )
 
-        # Generate content using intent-specific model
+        # Step 5: Apply low-confidence prompt suffix if needed
+        if retrieval_confidence.level == RetrievalConfidenceLevel.LOW:
+            system_prompt = system_prompt + "\n" + LOW_CONFIDENCE_SUFFIX
+
+        # Generate content using confidence-based model routing (TAG)
         try:
-            response, model_used = await self._generate_with_llm(
-                system_prompt, user_prompt, intent=intent.intent
+            response, model_used = await self._generate_with_confidence(
+                system_prompt, user_prompt, confidence=retrieval_confidence
             )
         except Exception as e:
             _, fallback_model = self._get_llm_for_intent(intent.intent)
@@ -271,6 +316,14 @@ class GenerationService:
             intent=intent.intent.value,
             model_used=model_used,
             coverage_percentage=round(coverage.coverage_percentage, 1),
+            # TAG routing info
+            tag_routing={
+                "retrieval_confidence": retrieval_confidence.level.value,
+                "threshold_used": retrieval_metadata.similarity_threshold,
+                "model_selected": model_used,
+                "avg_relevance": round(retrieval_confidence.metrics.avg_relevance_score, 3),
+                "high_quality_chunks": retrieval_confidence.metrics.high_quality_chunk_count,
+            },
         )
 
         return result
@@ -509,6 +562,48 @@ class GenerationService:
             "Generating with LLM",
             model=model_name,
             intent=intent.value if intent else "default",
+            num_ctx=self.settings.ollama_num_ctx,
+        )
+
+        messages = [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=user_prompt),
+        ]
+
+        response = await llm.ainvoke(messages)
+        return response.content, model_name
+
+    async def _generate_with_confidence(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        confidence: RetrievalConfidence,
+    ) -> tuple[str, str]:
+        """Generate content using confidence-based model routing (TAG).
+
+        This is the main generation method that routes to different models
+        based on retrieval confidence:
+        - HIGH confidence: Use fast model for quick responses
+        - MEDIUM confidence: Use standard model for balanced quality
+        - LOW confidence: Use quality model with uncertainty prompts
+
+        Args:
+            system_prompt: System message (may include LOW_CONFIDENCE_SUFFIX)
+            user_prompt: User message
+            confidence: Retrieval confidence assessment
+
+        Returns:
+            Tuple of (generated text, model name used)
+        """
+        llm, model_name = self._get_llm_for_confidence(confidence)
+
+        logger.info(
+            "Generating with confidence-based routing (TAG)",
+            model=model_name,
+            confidence_level=confidence.level.value,
+            avg_relevance=round(confidence.metrics.avg_relevance_score, 3),
+            high_quality_chunks=confidence.metrics.high_quality_chunk_count,
+            reasoning=confidence.reasoning,
             num_ctx=self.settings.ollama_num_ctx,
         )
 
