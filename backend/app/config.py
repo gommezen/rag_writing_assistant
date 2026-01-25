@@ -23,8 +23,8 @@ class Settings(BaseSettings):
     embedding_model: str = "mxbai-embed-large"
     generation_model: str = "qwen2.5:7b-instruct-q4_0"  # Default/fallback model
 
-    # Context window (4x default for better coverage)
-    ollama_num_ctx: int = 8192
+    # Context window (reduced for faster generation, lower VRAM)
+    ollama_num_ctx: int = 4096
 
     # Intent-specific models
     analysis_model: str = "llama3.1:8b-instruct-q8_0"  # Higher quality for deep analysis
