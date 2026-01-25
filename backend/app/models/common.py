@@ -218,12 +218,14 @@ class GeneratedSection:
     content: str
     sources: list[SourceReference]  # Never optional - empty list if none found
     confidence: ConfidenceLevel
+    title: str | None = None  # Extracted from markdown heading (e.g., "Introduction")
     warnings: list[str] = field(default_factory=list)
     is_user_edited: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "section_id": self.section_id,
+            "title": self.title,
             "content": self.content,
             "sources": [s.to_dict() for s in self.sources],
             "confidence": self.confidence.value,
@@ -238,6 +240,7 @@ class GeneratedSection:
             content=data["content"],
             sources=[SourceReference.from_dict(s) for s in data["sources"]],
             confidence=ConfidenceLevel(data["confidence"]),
+            title=data.get("title"),
             warnings=data.get("warnings", []),
             is_user_edited=data.get("is_user_edited", False),
         )

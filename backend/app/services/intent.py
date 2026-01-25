@@ -56,6 +56,8 @@ ANALYSIS_PATTERNS = IntentPattern(
         r"\b(what\s+are\s+the\s+key)\b",
         r"\b(what\s+is\s+the\s+overview)\b",
         r"\b(analyze|analyse|analysis)\b",
+        # "analyse/analyze this document" - strong analysis signal
+        r"\b(analyze|analyse)\s+(this|the)\s+(document|text|file)\b",
         r"\b(themes?|patterns?)\s+(in|from|across)\b",
         r"\b(extract|identify)\s+(key|main|important|ideas?)\b",
         # Focused summary triggers (escalation phrases)
@@ -64,6 +66,9 @@ ANALYSIS_PATTERNS = IntentPattern(
         r"\bwhat\s+does\s+(it|the\s+document)\s+say\s+about\b",
         # Document-level analysis
         r"\b(about\s+this\s+document|of\s+this\s+document)\b",
+        # "what is at stake" type analysis questions
+        r"\bwhat\s+is\s+at\s+stake\b",
+        r"\bwhat\s+are\s+the\s+(implications?|consequences?|issues?)\b",
     ],
     intent=QueryIntent.ANALYSIS,
     retrieval_type=RetrievalType.DIVERSE,

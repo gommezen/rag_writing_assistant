@@ -48,6 +48,7 @@ class SourceReferenceResponse(BaseModel):
 class GeneratedSectionResponse(BaseModel):
     """API response model for a generated section."""
     section_id: str
+    title: str | None = None  # Extracted from markdown heading (e.g., "Introduction")
     content: str
     sources: list[SourceReferenceResponse]  # Never null, empty list if no sources
     confidence: ConfidenceLevel
@@ -58,6 +59,7 @@ class GeneratedSectionResponse(BaseModel):
     def from_dataclass(cls, section: GeneratedSection) -> "GeneratedSectionResponse":
         return cls(
             section_id=section.section_id,
+            title=section.title,
             content=section.content,
             sources=[SourceReferenceResponse.from_dataclass(s) for s in section.sources],
             confidence=section.confidence,

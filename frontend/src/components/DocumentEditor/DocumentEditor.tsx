@@ -135,11 +135,11 @@ function SectionEditor({
         section.is_user_edited ? 'section-editor--edited' : ''
       } ${isAccepted ? 'section-editor--accepted' : ''}`}
       onClick={onClick}
-      aria-label={`Section ${index + 1}`}
+      aria-label={section.title || `Section ${index + 1}`}
     >
       <header className="section-editor__header">
         <span className="section-editor__label">
-          Section {index + 1}
+          {section.title || `Section ${index + 1}`}
           {section.is_user_edited && (
             <span className="section-editor__edited-badge">Edited</span>
           )}
@@ -156,7 +156,7 @@ function SectionEditor({
         onChange={onChange}
         placeholder="Section content..."
         disabled={isRegenerating}
-        aria-label={`Content for section ${index + 1}`}
+        aria-label={`Content for ${section.title || `section ${index + 1}`}`}
       />
 
       {section.warnings.length > 0 && (

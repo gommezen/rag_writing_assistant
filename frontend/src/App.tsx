@@ -8,7 +8,7 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Sun, Moon, ChevronLeft, ChevronRight, Download, Copy, Check, Eye, Lightbulb, MessageSquare, PenTool } from 'lucide-react';
+import { Sun, Moon, ChevronLeft, ChevronRight, Download, Copy, Check, Eye, Lightbulb, MessageSquare, PenTool, Settings, X } from 'lucide-react';
 import { DocumentEditor } from './components/DocumentEditor';
 import { DocumentPreview } from './components/DocumentPreview';
 import { WarningBanner } from './components/WarningBanner';
@@ -60,6 +60,16 @@ function App() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [cumulativeCoverage, setCumulativeCoverage] = useState<CoverageDescriptor | null>(null);
   const [lastContextUsed, setLastContextUsed] = useState<ContextUsed | null>(null);
+
+  // Document selection state
+  const [selectedDocumentIds, setSelectedDocumentIds] = useState<Set<string>>(new Set());
+
+  // Write-Chat connection state
+  const [lastGenerationPrompt, setLastGenerationPrompt] = useState<string | null>(null);
+
+  // Intent mode selection (null = auto-detect)
+  const [intentMode, setIntentMode] = useState<'auto' | 'analysis' | 'qa' | 'writing'>('auto');
+  const [showModeSettings, setShowModeSettings] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const promptTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -165,12 +175,42 @@ function App() {
     async (documentId: string) => {
       try {
         await deleteMutation.mutateAsync(documentId);
+        // Remove from selection if present
+        setSelectedDocumentIds((prev) => {
+          const next = new Set(prev);
+          next.delete(documentId);
+          return next;
+        });
       } catch (error) {
         console.error('Delete failed:', error);
       }
     },
     [deleteMutation]
   );
+
+  // Handle document selection toggle
+  const handleToggleDocumentSelection = useCallback((documentId: string) => {
+    setSelectedDocumentIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(documentId)) {
+        next.delete(documentId);
+      } else {
+        next.add(documentId);
+      }
+      return next;
+    });
+  }, []);
+
+  // Select all documents
+  const handleSelectAllDocuments = useCallback(() => {
+    const readyDocs = documents.filter((d) => d.status === 'ready');
+    setSelectedDocumentIds(new Set(readyDocs.map((d) => d.document_id)));
+  }, [documents]);
+
+  // Clear document selection
+  const handleClearDocumentSelection = useCallback(() => {
+    setSelectedDocumentIds(new Set());
+  }, []);
 
   // Handle generation
   const handleGenerate = useCallback(async (escalateCoverage = false) => {
@@ -180,9 +220,15 @@ function App() {
       const result = await generateMutation.mutateAsync({
         prompt,
         escalate_coverage: escalateCoverage,
+        // Pass selected documents (omit = all documents)
+        ...(selectedDocumentIds.size > 0 && { document_ids: Array.from(selectedDocumentIds) }),
+        // Pass intent override if user selected a specific mode
+        ...(intentMode !== 'auto' && { intent_override: intentMode }),
       });
       setSections(result.sections);
       setRetrievalMetadata(result.retrieval_metadata);
+      // Store prompt for Write-Chat connection
+      setLastGenerationPrompt(prompt);
 
       // Collect global warnings from retrieval
       const warnings: string[] = [];
@@ -194,7 +240,7 @@ function App() {
       console.error('Generation failed:', error);
       setGlobalWarnings([`Generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`]);
     }
-  }, [prompt, generateMutation]);
+  }, [prompt, generateMutation, selectedDocumentIds, intentMode]);
 
   // Handle expand coverage
   const handleExpandCoverage = useCallback(() => {
@@ -314,9 +360,12 @@ function App() {
       };
       setChatMessages((prev) => [...prev, tempUserMessage]);
 
-      const request = conversationId
-        ? { conversation_id: conversationId, message }
-        : { message };
+      const request = {
+        message,
+        ...(conversationId && { conversation_id: conversationId }),
+        // Pass selected documents (omit = all documents)
+        ...(selectedDocumentIds.size > 0 && { document_ids: Array.from(selectedDocumentIds) }),
+      };
       const result = await chatMutation.mutateAsync(request);
 
       // Update state with response
@@ -347,7 +396,7 @@ function App() {
       setChatMessages((prev) => prev.filter((m) => !m.message_id.startsWith('temp-')));
       setGlobalWarnings([`Chat failed: ${error instanceof Error ? error.message : 'Unknown error'}`]);
     }
-  }, [conversationId, chatMutation]);
+  }, [conversationId, chatMutation, selectedDocumentIds]);
 
   // Handle starting a new chat
   const handleNewChat = useCallback(() => {
@@ -383,6 +432,27 @@ function App() {
       console.error('Failed to delete conversation:', error);
     }
   }, [deleteConversationMutation, conversationId, handleNewChat]);
+
+  // Handle "Discuss in Chat" - switches to chat mode with context
+  const handleDiscussInChat = useCallback(async () => {
+    // Start a new chat
+    handleNewChat();
+
+    // Switch to chat mode
+    setMode('chat');
+
+    // Send a brief context message about the generated content
+    if (lastGenerationPrompt) {
+      const contextMessage = `I just generated a draft about: "${lastGenerationPrompt}". Let's discuss it - what would you like to explore further?`;
+
+      // Send the context as the first message
+      try {
+        await handleChatMessage(contextMessage);
+      } catch (error) {
+        console.error('Failed to send context message:', error);
+      }
+    }
+  }, [handleNewChat, handleChatMessage, lastGenerationPrompt]);
 
   return (
     <div className="app">
@@ -465,6 +535,35 @@ function App() {
               </div>
             )}
 
+            {/* Selection controls */}
+            {!sidebarCollapsed && documents.length > 0 && (
+              <div className="document-selection">
+                <span className="document-selection__count">
+                  {selectedDocumentIds.size === 0
+                    ? 'All documents'
+                    : `${selectedDocumentIds.size} of ${documents.filter((d) => d.status === 'ready').length} selected`}
+                </span>
+                <div className="document-selection__actions">
+                  <button
+                    type="button"
+                    className="document-selection__btn"
+                    onClick={handleSelectAllDocuments}
+                    disabled={documents.filter((d) => d.status === 'ready').length === 0}
+                  >
+                    Select All
+                  </button>
+                  <button
+                    type="button"
+                    className="document-selection__btn"
+                    onClick={handleClearDocumentSelection}
+                    disabled={selectedDocumentIds.size === 0}
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className={`document-list ${sidebarCollapsed ? 'document-list--collapsed' : ''}`}>
               {isLoadingDocuments ? (
                 <p className="document-list__loading">Loading documents...</p>
@@ -475,6 +574,8 @@ function App() {
                   <DocumentCard
                     key={doc.document_id}
                     document={doc}
+                    isSelected={selectedDocumentIds.has(doc.document_id)}
+                    onToggleSelect={() => handleToggleDocumentSelection(doc.document_id)}
                     onDelete={() => handleDeleteDocument(doc.document_id)}
                     onPreview={() => setPreviewDocumentId(doc.document_id)}
                     isDeleting={deleteMutation.isPending}
@@ -548,9 +649,19 @@ function App() {
             <>
               {/* Prompt Input */}
               <section className="prompt-section">
-                <label className="prompt-section__label" htmlFor="prompt-input">
-                  What would you like to write about?
-                </label>
+                <div className="prompt-section__header">
+                  <button
+                    type="button"
+                    className="mode-settings-btn"
+                    onClick={() => setShowModeSettings(true)}
+                    aria-label="Configure generation mode"
+                  >
+                    <Settings size={18} />
+                    <span className="mode-settings-btn__label">
+                      {intentMode === 'auto' ? 'Auto' : intentMode === 'qa' ? 'Q&A' : intentMode.charAt(0).toUpperCase() + intentMode.slice(1)}
+                    </span>
+                  </button>
+                </div>
                 <div className="prompt-section__input-group">
                   <textarea
                     ref={promptTextareaRef}
@@ -572,6 +683,18 @@ function App() {
                 </div>
               </section>
 
+              {/* Mode Settings Modal */}
+              {showModeSettings && (
+                <ModeSettingsModal
+                  currentMode={intentMode}
+                  onSelectMode={(mode) => {
+                    setIntentMode(mode);
+                    setShowModeSettings(false);
+                  }}
+                  onClose={() => setShowModeSettings(false)}
+                />
+              )}
+
               {/* Global Warnings */}
               {globalWarnings.length > 0 && (
                 <WarningBanner warnings={globalWarnings} />
@@ -590,6 +713,16 @@ function App() {
               <section className="editor-section">
                 {sections.length > 0 && (
                   <div className="editor-section__header">
+                    <button
+                      type="button"
+                      className="discuss-btn"
+                      onClick={handleDiscussInChat}
+                      disabled={chatMutation.isPending}
+                      aria-label="Discuss this content in chat"
+                    >
+                      <MessageSquare size={16} />
+                      <span>Discuss in Chat</span>
+                    </button>
                     <button
                       type="button"
                       className={`copy-btn ${copied ? 'copy-btn--copied' : ''}`}
@@ -639,14 +772,28 @@ function App() {
 
 interface DocumentCardProps {
   document: Document;
+  isSelected: boolean;
+  onToggleSelect: () => void;
   onDelete: () => void;
   onPreview: () => void;
   isDeleting: boolean;
 }
 
-function DocumentCard({ document, onDelete, onPreview, isDeleting }: DocumentCardProps) {
+function DocumentCard({ document, isSelected, onToggleSelect, onDelete, onPreview, isDeleting }: DocumentCardProps) {
+  const isReady = document.status === 'ready';
+
   return (
-    <article className="document-card">
+    <article className={`document-card ${isSelected ? 'document-card--selected' : ''}`}>
+      <div className="document-card__selection">
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={onToggleSelect}
+          disabled={!isReady}
+          aria-label={`Select ${document.metadata.title}`}
+          className="document-card__checkbox"
+        />
+      </div>
       <div className="document-card__info">
         <h3 className="document-card__title">{document.metadata.title}</h3>
         <p className="document-card__meta">
@@ -663,7 +810,7 @@ function DocumentCard({ document, onDelete, onPreview, isDeleting }: DocumentCar
           type="button"
           className="document-card__preview"
           onClick={onPreview}
-          disabled={document.status !== 'ready'}
+          disabled={!isReady}
           aria-label={`Preview ${document.metadata.title}`}
         >
           <Eye size={14} />
@@ -746,6 +893,78 @@ function CoverageStats({ metadata, onExpandCoverage, isExpanding }: CoverageStat
           </ul>
         </div>
       )}
+    </div>
+  );
+}
+
+interface ModeSettingsModalProps {
+  currentMode: 'auto' | 'analysis' | 'qa' | 'writing';
+  onSelectMode: (mode: 'auto' | 'analysis' | 'qa' | 'writing') => void;
+  onClose: () => void;
+}
+
+const MODE_OPTIONS = [
+  {
+    id: 'auto' as const,
+    label: 'Auto',
+    description: 'Automatically detects your intent based on the prompt. Best for most use cases.',
+  },
+  {
+    id: 'analysis' as const,
+    label: 'Analysis',
+    description: 'Summarize, find themes, or get an overview. Samples broadly across your documents.',
+  },
+  {
+    id: 'qa' as const,
+    label: 'Q&A',
+    description: 'Ask specific questions and get direct answers. Searches for the most relevant passages.',
+  },
+  {
+    id: 'writing' as const,
+    label: 'Writing',
+    description: 'Generate new content like reports, letters, or articles grounded in your documents.',
+  },
+];
+
+function ModeSettingsModal({ currentMode, onSelectMode, onClose }: ModeSettingsModalProps) {
+  return (
+    <div className="mode-modal-overlay" onClick={onClose}>
+      <div className="mode-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="mode-modal__header">
+          <h2 className="mode-modal__title">Configure Generation</h2>
+          <button
+            type="button"
+            className="mode-modal__close"
+            onClick={onClose}
+            aria-label="Close"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <p className="mode-modal__description">
+          Choose how the AI should process your prompt and retrieve information from your documents.
+        </p>
+
+        <div className="mode-modal__options">
+          {MODE_OPTIONS.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              className={`mode-option ${currentMode === option.id ? 'mode-option--selected' : ''}`}
+              onClick={() => onSelectMode(option.id)}
+            >
+              <div className="mode-option__header">
+                <span className="mode-option__label">{option.label}</span>
+                {currentMode === option.id && (
+                  <Check size={16} className="mode-option__check" />
+                )}
+              </div>
+              <p className="mode-option__description">{option.description}</p>
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

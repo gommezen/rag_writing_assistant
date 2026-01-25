@@ -6,6 +6,7 @@ import type { ConfidenceLevel, RetrievalMetadata, SourceReference } from './comm
 
 export interface GeneratedSection {
   section_id: string;
+  title?: string; // Extracted from markdown heading (e.g., "Introduction")
   content: string;
   sources: SourceReference[]; // Never null, empty array if no sources
   confidence: ConfidenceLevel;

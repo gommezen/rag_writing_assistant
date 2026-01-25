@@ -202,7 +202,7 @@ class ChatService:
             conversation.cumulative_coverage = CoverageDescriptor(
                 retrieval_type=RetrievalType.SIMILARITY,
                 chunks_seen=0,
-                chunks_total=retrieval_metadata.chunks_retrieved,
+                chunks_total=0,
                 coverage_percentage=0.0,
                 document_coverage={},
                 blind_spots=[],
@@ -222,15 +222,25 @@ class ChatService:
         conversation.cumulative_coverage.chunks_seen = len(all_chunk_ids)
 
         # Use coverage from retrieval metadata if available
+        # Track the MAX chunks_total seen (documents may change between turns)
         if retrieval_metadata.coverage:
-            conversation.cumulative_coverage.chunks_total = retrieval_metadata.coverage.chunks_total
-            coverage_pct = (len(all_chunk_ids) / retrieval_metadata.coverage.chunks_total * 100) if retrieval_metadata.coverage.chunks_total > 0 else 0
+            new_total = retrieval_metadata.coverage.chunks_total
+            # Keep the larger total to account for document selection changes
+            conversation.cumulative_coverage.chunks_total = max(
+                conversation.cumulative_coverage.chunks_total,
+                new_total
+            )
+
+        # Calculate percentage (cap at 100% in case of document selection changes)
+        chunks_total = conversation.cumulative_coverage.chunks_total
+        if chunks_total > 0:
+            coverage_pct = min((len(all_chunk_ids) / chunks_total * 100), 100.0)
             conversation.cumulative_coverage.coverage_percentage = round(coverage_pct, 1)
 
             # Build coverage summary for prompt
             conversation.cumulative_coverage.coverage_summary = (
                 f"Across this conversation, you have seen {len(all_chunk_ids)} of "
-                f"{retrieval_metadata.coverage.chunks_total} total chunks "
+                f"{chunks_total} total chunks "
                 f"(~{conversation.cumulative_coverage.coverage_percentage:.0f}% cumulative coverage)."
             )
 
