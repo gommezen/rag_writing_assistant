@@ -3,10 +3,10 @@
 Provides similarity search with threshold filtering and metadata tracking.
 """
 
+import math
 import time
-from datetime import UTC, datetime
-
 from collections import defaultdict
+from datetime import UTC, datetime
 
 from ..config import get_settings
 from ..core import get_logger
@@ -113,10 +113,14 @@ class RetrievalService:
                 chunks=results,
                 top_k=top_k,
             )
-            # Use rerank score as the relevance score
-            results = [(chunk, rerank_score) for chunk, _, rerank_score in reranked]
-            # Filter by threshold on rerank scores
-            results = [(chunk, score) for chunk, score in results if score >= threshold]
+            # Convert rerank scores to 0-1 range using sigmoid for consistency
+            # Cross-encoder scores are logits (can be negative), not probabilities
+            results = [
+                (chunk, 1 / (1 + math.exp(-rerank_score)))  # sigmoid normalization
+                for chunk, _, rerank_score in reranked
+            ]
+            # Note: Don't filter by threshold after reranking - the reranker has already
+            # selected top-k by relevance. Threshold filtering is for FAISS scores only.
 
         retrieval_time_ms = (time.time() - start_time) * 1000
 
