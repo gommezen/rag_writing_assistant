@@ -317,6 +317,12 @@ class ChatService:
             top_k=self.settings.top_k_retrieval,
         )
 
+        # Compute coverage for this retrieval (needed for cumulative tracking)
+        retrieval_metadata.coverage = self.retrieval_service.compute_similarity_coverage(
+            sources=sources,
+            document_ids=effective_doc_ids,
+        )
+
         if not sources:
             logger.warning(
                 "No sources retrieved for chat message",
