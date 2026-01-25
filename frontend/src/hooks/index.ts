@@ -13,4 +13,10 @@ export {
 
 export { useGenerateDraft, useRegenerateSection, useSuggestedQuestions } from './useGeneration';
 
-export { useChat, useConversation } from './useChat';
+export {
+  useChat,
+  useConversation,
+  useConversations,
+  useDeleteConversation,
+  useUpdateConversationTitle,
+} from './useChat';

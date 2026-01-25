@@ -572,6 +572,7 @@ class GenerationService:
 
         Split on markdown headings (## or ###) for structured documents.
         For unstructured content like cover letters, keep as single section.
+        Extracts title from heading and removes it from content body.
         """
         import re
 
@@ -584,6 +585,7 @@ class GenerationService:
             parts = re.split(r'(^#{2,3}\s+.+$)', content, flags=re.MULTILINE)
             sections = []
             section_idx = 0
+            current_title: str | None = None
             current_content = []
 
             for part in parts:
@@ -599,11 +601,13 @@ class GenerationService:
                             content=section_text,
                             sources=sources,
                             section_id=f"{generation_id}-{section_idx}",
+                            title=current_title,
                         )
                         sections.append(section)
                         section_idx += 1
                         current_content = []
-                    current_content.append(part)
+                    # Extract title from heading (remove ## or ### prefix)
+                    current_title = re.sub(r'^#{2,3}\s+', '', part).strip()
                 else:
                     current_content.append(part)
 
@@ -614,6 +618,7 @@ class GenerationService:
                     content=section_text,
                     sources=sources,
                     section_id=f"{generation_id}-{section_idx}",
+                    title=current_title,
                 )
                 sections.append(section)
 
@@ -670,8 +675,16 @@ class GenerationService:
         content: str,
         sources: list[SourceReference],
         section_id: str,
+        title: str | None = None,
     ) -> GeneratedSection:
-        """Create a GeneratedSection with appropriate metadata."""
+        """Create a GeneratedSection with appropriate metadata.
+
+        Args:
+            content: Section content (without heading)
+            sources: Available source references
+            section_id: Unique section ID
+            title: Optional section title (extracted from markdown heading)
+        """
         # Extract which sources were cited
         cited_indices = extract_citations(content)
 
@@ -697,6 +710,7 @@ class GenerationService:
             content=content,
             sources=section_sources,
             confidence=confidence,
+            title=title,
             warnings=[],
             is_user_edited=False,
         )

@@ -2,6 +2,97 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.3] - 2026-01-25
+
+### Added
+
+#### Document Selection
+- **Checkbox Selection**: Documents now have checkboxes to select which ones to include in generation/chat
+  - Checkboxes appear next to each document in the sidebar
+  - "Select All" and "Clear" buttons for quick selection management
+  - Selection count badge shows "3 of 5 selected" or "All documents"
+  - Empty selection means "use all documents" (default behavior preserved)
+
+- **Per-Mode Filtering**: Selected documents are passed to both Write and Chat modes
+  - `document_ids` parameter sent to `/api/generate` and `/api/chat` endpoints
+  - Only selected document chunks are retrieved for generation
+  - Allows focused analysis on specific documents
+
+#### Write-Chat Connection
+- **"Discuss in Chat" Button**: New button in Write mode to continue discussing generated content
+  - Appears in editor header after content is generated
+  - Switches to Chat mode and starts a new conversation
+  - Sends context message summarizing the generated content (prompt + sections)
+  - Enables seamless transition from writing to discussion
+
+#### Section Titles
+- **Meaningful Section Headers**: Sections now display extracted titles instead of "Section 1, 2, 3"
+  - Backend extracts titles from markdown headings (`## Introduction` → "Introduction")
+  - Titles displayed in section headers in the document editor
+  - Fallback to "Section N" if no heading found
+
+### Changed
+
+#### Backend
+- `GeneratedSection` dataclass now includes `title: str | None` field
+- `GeneratedSectionResponse` API model includes `title` in response
+- Section parser extracts heading text and removes it from content body
+- `_create_section()` accepts optional `title` parameter
+
+#### Frontend
+- `GeneratedSection` TypeScript type includes `title?: string`
+- `DocumentCard` component accepts `isSelected` and `onToggleSelect` props
+- Document selection state managed in `App.tsx` with `Set<string>`
+- Aria labels updated to use section titles for accessibility
+
+---
+
+## [0.2.2] - 2026-01-24
+
+### Added
+
+#### Chat Persistence & History
+- **Conversation Storage**: Conversations now persist across server restarts
+  - JSON file-based storage in `data/conversations/`
+  - Lightweight index file for fast listing
+  - Individual files per conversation for full data
+  - Auto-save after each message
+
+- **Conversation History UI**: New sidebar component in chat mode
+  - Browse past conversations with title and timestamp
+  - Resume any previous conversation
+  - Delete conversations with confirmation
+  - "New Chat" button to start fresh
+  - Highlights current active conversation
+
+- **Backend Endpoints**:
+  - `GET /api/chat` - List all conversations (sorted by updated_at)
+  - `DELETE /api/chat/{id}` - Delete a conversation
+  - `PATCH /api/chat/{id}` - Update conversation title
+
+- **New Models**:
+  - `ConversationSummary` - Lightweight summary for listings
+  - `ConversationSummaryResponse` - API response model
+  - `from_dict()` methods on `ChatMessage` and `Conversation` for deserialization
+
+- **New Services**:
+  - `ConversationStore` - File-based persistence service
+  - Methods: `save_conversation`, `load_conversation`, `list_conversations`, `delete_conversation`, `update_title`
+
+#### Frontend
+- `ConversationHistory` component with delete confirmation
+- `useConversations` hook for listing conversations
+- `useDeleteConversation` hook with cache invalidation
+- `useUpdateConversationTitle` hook
+- API client methods for conversation management
+
+### Changed
+- `ChatService` now uses `ConversationStore` for persistence
+- Conversations loaded from storage on server startup
+- Chat mode sidebar shows conversation history instead of just "New Chat" button
+
+---
+
 ## [0.2.1] - 2026-01-24
 
 ### Added

@@ -48,6 +48,8 @@ from .chat import (
     ContextUsedResponse,
     Conversation,
     ConversationResponse,
+    ConversationSummary,
+    ConversationSummaryResponse,
 )
 
 __all__ = [
@@ -96,4 +98,6 @@ __all__ = [
     "ContextUsedResponse",
     "Conversation",
     "ConversationResponse",
+    "ConversationSummary",
+    "ConversationSummaryResponse",
 ]

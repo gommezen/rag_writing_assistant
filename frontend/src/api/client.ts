@@ -7,6 +7,7 @@ import type {
   ChatRequest,
   ChatResponse,
   Conversation,
+  ConversationSummary,
   Document,
   DocumentChunksResponse,
   DocumentListResponse,
@@ -136,6 +137,29 @@ class ApiClient {
 
   async getConversation(conversationId: string): Promise<Conversation> {
     return this.request(`/chat/${conversationId}`);
+  }
+
+  async listConversations(): Promise<ConversationSummary[]> {
+    return this.request('/chat');
+  }
+
+  async deleteConversation(conversationId: string): Promise<{ message: string }> {
+    return this.request(`/chat/${conversationId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async updateConversationTitle(
+    conversationId: string,
+    title: string
+  ): Promise<{ message: string }> {
+    return this.request(`/chat/${conversationId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ title }),
+    });
   }
 }
 

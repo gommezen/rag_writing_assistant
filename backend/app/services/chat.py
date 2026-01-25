@@ -16,6 +16,7 @@ from ..models import (
     ChatRole,
     ContextUsedResponse,
     Conversation,
+    ConversationSummary,
     CoverageDescriptor,
     DocumentCoverage,
     GeneratedSection,
@@ -25,6 +26,7 @@ from ..models import (
     SourceReference,
 )
 from ..rag import build_chat_prompt, sanitize_citations, extract_citations
+from .conversation_store import ConversationStore
 from .generation import get_generation_service
 from .intent import get_intent_service
 from .retrieval import get_retrieval_service
@@ -41,8 +43,23 @@ class ChatService:
         self.generation_service = get_generation_service()
         self.retrieval_service = get_retrieval_service()
         self.intent_service = get_intent_service()
-        # In-memory conversation storage (session-only for MVP)
+        # Persistent conversation storage
+        self.store = ConversationStore(self.settings.conversations_dir)
+        # In-memory cache for active conversations
         self.conversations: dict[str, Conversation] = {}
+        # Load existing conversations from store
+        self._load_from_store()
+
+    def _load_from_store(self) -> None:
+        """Load all conversations from persistent storage into memory cache."""
+        for summary in self.store.list_conversations():
+            conversation = self.store.load_conversation(summary.conversation_id)
+            if conversation:
+                self.conversations[conversation.conversation_id] = conversation
+        logger.info(
+            "Loaded conversations from store",
+            conversation_count=len(self.conversations),
+        )
 
     def get_conversation(self, conversation_id: str) -> Conversation | None:
         """Get a conversation by ID.
@@ -85,6 +102,8 @@ class ChatService:
             updated_at=datetime.now(UTC),
         )
         self.conversations[new_id] = conversation
+        # Persist new conversation immediately
+        self.store.save_conversation(conversation)
 
         logger.info(
             "Created new conversation",
@@ -183,7 +202,7 @@ class ChatService:
             conversation.cumulative_coverage = CoverageDescriptor(
                 retrieval_type=RetrievalType.SIMILARITY,
                 chunks_seen=0,
-                chunks_total=retrieval_metadata.chunks_retrieved,
+                chunks_total=0,
                 coverage_percentage=0.0,
                 document_coverage={},
                 blind_spots=[],
@@ -203,15 +222,25 @@ class ChatService:
         conversation.cumulative_coverage.chunks_seen = len(all_chunk_ids)
 
         # Use coverage from retrieval metadata if available
+        # Track the MAX chunks_total seen (documents may change between turns)
         if retrieval_metadata.coverage:
-            conversation.cumulative_coverage.chunks_total = retrieval_metadata.coverage.chunks_total
-            coverage_pct = (len(all_chunk_ids) / retrieval_metadata.coverage.chunks_total * 100) if retrieval_metadata.coverage.chunks_total > 0 else 0
+            new_total = retrieval_metadata.coverage.chunks_total
+            # Keep the larger total to account for document selection changes
+            conversation.cumulative_coverage.chunks_total = max(
+                conversation.cumulative_coverage.chunks_total,
+                new_total
+            )
+
+        # Calculate percentage (cap at 100% in case of document selection changes)
+        chunks_total = conversation.cumulative_coverage.chunks_total
+        if chunks_total > 0:
+            coverage_pct = min((len(all_chunk_ids) / chunks_total * 100), 100.0)
             conversation.cumulative_coverage.coverage_percentage = round(coverage_pct, 1)
 
             # Build coverage summary for prompt
             conversation.cumulative_coverage.coverage_summary = (
                 f"Across this conversation, you have seen {len(all_chunk_ids)} of "
-                f"{retrieval_metadata.coverage.chunks_total} total chunks "
+                f"{chunks_total} total chunks "
                 f"(~{conversation.cumulative_coverage.coverage_percentage:.0f}% cumulative coverage)."
             )
 
@@ -347,6 +376,9 @@ class ChatService:
         )
         conversation.messages.append(assistant_message)
 
+        # Persist conversation after each turn
+        self.store.save_conversation(conversation)
+
         generation_time_ms = (time.time() - start_time) * 1000
 
         # Build context used info for transparency
@@ -390,6 +422,50 @@ class ChatService:
                 return chunk.content
         # Fallback to excerpt if chunk not found
         return source.excerpt
+
+    def list_conversations(self) -> list[ConversationSummary]:
+        """List all conversations sorted by updated_at (newest first).
+
+        Returns:
+            List of conversation summaries
+        """
+        return self.store.list_conversations()
+
+    def delete_conversation(self, conversation_id: str) -> bool:
+        """Delete a conversation.
+
+        Args:
+            conversation_id: The conversation ID to delete
+
+        Returns:
+            True if deleted, False if not found
+        """
+        # Remove from memory cache
+        if conversation_id in self.conversations:
+            del self.conversations[conversation_id]
+
+        # Remove from persistent storage
+        result = self.store.delete_conversation(conversation_id)
+
+        if result:
+            logger.info(
+                "Deleted conversation",
+                conversation_id=conversation_id,
+            )
+
+        return result
+
+    def update_conversation_title(self, conversation_id: str, title: str) -> bool:
+        """Update a conversation's title.
+
+        Args:
+            conversation_id: The conversation ID
+            title: The new title
+
+        Returns:
+            True if updated, False if not found
+        """
+        return self.store.update_title(conversation_id, title)
 
 
 # Singleton instance
