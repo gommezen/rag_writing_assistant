@@ -159,9 +159,10 @@ tramp
 # Root data directory (user uploads during development)
 /data/
 
-# Data directories (contain user documents and vectors)
+# Data directories (contain user documents, vectors, and conversations)
 backend/data/documents/
 backend/data/vectors/
+backend/data/conversations/
 
 # Keep the data directory structure but not contents
 !backend/data/.gitkeep
