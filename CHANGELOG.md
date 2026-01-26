@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.4] - 2026-01-26
+
+### Added
+
+#### Interactive Citations
+- **Hover Preview**: `[Source N]` citations show tooltip with document title, excerpt, and relevance score
+- **Click Navigation**: Clicking a citation scrolls to and highlights the corresponding SourceCard
+- **Chat Integration**: Same hover/click behavior in chat messages with auto-expand of sources panel
+
+#### View/Edit Mode
+- **Content Display**: Sections show rendered content with interactive citations by default
+- **Edit Toggle**: "Edit" button switches to textarea for manual editing
+- **Save/Cancel**: Explicit save or discard changes
+
+### Changed
+- SourceCard now supports ref forwarding for scroll targeting
+- Highlight animation uses pulse effect for better visibility
+
+---
+
 ## [0.2.3] - 2026-01-25
 
 ### Added

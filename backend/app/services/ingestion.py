@@ -32,7 +32,7 @@ from ..rag import create_chunker, get_vector_store
 logger = get_logger(__name__)
 
 # Thread pool for blocking I/O operations
-_executor = ThreadPoolExecutor(max_workers=4)
+_executor = ThreadPoolExecutor(max_workers=8)
 
 
 class IngestionService:

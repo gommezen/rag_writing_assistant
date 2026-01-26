@@ -5,6 +5,7 @@
  * to see and verify where generated content comes from.
  */
 
+import { forwardRef } from 'react';
 import type { SourceReference } from '../../types';
 import './SourceCard.css';
 
@@ -15,17 +16,16 @@ interface SourceCardProps {
   onClick?: () => void;
 }
 
-export function SourceCard({
-  source,
-  index,
-  isHighlighted = false,
-  onClick,
-}: SourceCardProps) {
+export const SourceCard = forwardRef<HTMLElement, SourceCardProps>(function SourceCard(
+  { source, index, isHighlighted = false, onClick },
+  ref
+) {
   const relevancePercent = Math.round(source.relevance_score * 100);
   const documentTitle = source.metadata['title'] ?? 'Untitled';
 
   return (
     <article
+      ref={ref}
       className={`source-card ${isHighlighted ? 'source-card--highlighted' : ''}`}
       onClick={onClick}
       role={onClick ? 'button' : undefined}
@@ -68,4 +68,4 @@ export function SourceCard({
       )}
     </article>
   );
-}
+});

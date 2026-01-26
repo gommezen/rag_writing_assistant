@@ -14,6 +14,8 @@ import { DocumentPreview } from './components/DocumentPreview';
 import { WarningBanner } from './components/WarningBanner';
 import { ChatView } from './components/ChatView';
 import { ConversationHistory } from './components/ConversationHistory';
+import { Toast, ToastMessage } from './components/Toast';
+import { DocumentListSkeleton, ContentSkeleton } from './components/Skeleton';
 import {
   useDocuments,
   useDocumentChunks,
@@ -45,7 +47,10 @@ function App() {
   const [regeneratingSection, setRegeneratingSection] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [acceptedSection, setAcceptedSection] = useState<string | null>(null);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    const saved = localStorage.getItem('sidebarCollapsed');
+    return saved === 'true';
+  });
   const [copied, setCopied] = useState(false);
   const [previewDocumentId, setPreviewDocumentId] = useState<string | null>(null);
   const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([]);
@@ -71,6 +76,9 @@ function App() {
   const [intentMode, setIntentMode] = useState<'auto' | 'analysis' | 'qa' | 'writing'>('auto');
   const [showModeSettings, setShowModeSettings] = useState(false);
 
+  // Toast notifications
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const promptTextareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -79,6 +87,11 @@ function App() {
     document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
     localStorage.setItem('theme', darkMode ? 'dark' : 'light');
   }, [darkMode]);
+
+  // Persist sidebar state
+  useEffect(() => {
+    localStorage.setItem('sidebarCollapsed', sidebarCollapsed ? 'true' : 'false');
+  }, [sidebarCollapsed]);
 
   // Document hooks
   const { data: documentsData, isLoading: isLoadingDocuments } = useDocuments();
@@ -114,13 +127,22 @@ function App() {
 
   const documents = documentsData?.documents ?? [];
 
+  // Toast helpers
+  const addToast = useCallback((message: string, type: 'error' | 'success' | 'info' = 'error') => {
+    setToasts((prev) => [...prev, { id: `${Date.now()}`, message, type }]);
+  }, []);
+
+  const dismissToast = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
   // Handle file upload (from input or drag & drop)
   const uploadFile = useCallback(
     async (file: File) => {
       const validTypes = ['.pdf', '.docx', '.txt'];
       const ext = file.name.toLowerCase().slice(file.name.lastIndexOf('.'));
       if (!validTypes.includes(ext)) {
-        setGlobalWarnings(['Invalid file type. Please upload PDF, DOCX, or TXT files.']);
+        addToast('Invalid file type. Please upload PDF, DOCX, or TXT files.', 'error');
         return;
       }
 
@@ -128,9 +150,10 @@ function App() {
         await uploadMutation.mutateAsync({ file });
       } catch (error) {
         console.error('Upload failed:', error);
+        addToast('Upload failed. Please try again.', 'error');
       }
     },
-    [uploadMutation]
+    [uploadMutation, addToast]
   );
 
   const handleFileUpload = useCallback(
@@ -238,14 +261,34 @@ function App() {
       setGlobalWarnings(warnings);
     } catch (error) {
       console.error('Generation failed:', error);
-      setGlobalWarnings([`Generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`]);
+      addToast(`Generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
     }
-  }, [prompt, generateMutation, selectedDocumentIds, intentMode]);
+  }, [prompt, generateMutation, selectedDocumentIds, intentMode, addToast]);
 
   // Handle expand coverage
   const handleExpandCoverage = useCallback(() => {
     handleGenerate(true);
   }, [handleGenerate]);
+
+  // Global keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Escape: close modals
+      if (e.key === 'Escape') {
+        if (showModeSettings) setShowModeSettings(false);
+        if (previewDocumentId) setPreviewDocumentId(null);
+      }
+      // Ctrl+Enter: generate in write mode
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        if (mode === 'write' && prompt.trim() && !generateMutation.isPending) {
+          e.preventDefault();
+          handleGenerate(false);
+        }
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [showModeSettings, previewDocumentId, mode, prompt, generateMutation.isPending, handleGenerate]);
 
   // Handle section content change
   const handleSectionChange = useCallback((sectionId: string, content: string) => {
@@ -394,9 +437,9 @@ function App() {
       console.error('Chat failed:', error);
       // Remove temp message on error
       setChatMessages((prev) => prev.filter((m) => !m.message_id.startsWith('temp-')));
-      setGlobalWarnings([`Chat failed: ${error instanceof Error ? error.message : 'Unknown error'}`]);
+      addToast(`Chat failed: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
     }
-  }, [conversationId, chatMutation, selectedDocumentIds]);
+  }, [conversationId, chatMutation, selectedDocumentIds, addToast]);
 
   // Handle starting a new chat
   const handleNewChat = useCallback(() => {
@@ -598,7 +641,7 @@ function App() {
 
             <div className={`document-list ${sidebarCollapsed ? 'document-list--collapsed' : ''}`}>
               {isLoadingDocuments ? (
-                <p className="document-list__loading">Loading documents...</p>
+                <DocumentListSkeleton />
               ) : documents.length === 0 ? (
                 <p className="document-list__empty">No documents uploaded yet.</p>
               ) : (
@@ -709,6 +752,7 @@ function App() {
                     className="prompt-section__button"
                     onClick={() => handleGenerate(false)}
                     disabled={!prompt.trim() || generateMutation.isPending}
+                    title="Generate Draft (Ctrl+Enter)"
                   >
                     {generateMutation.isPending ? 'Generating...' : 'Generate Draft'}
                   </button>
@@ -775,14 +819,18 @@ function App() {
                     </button>
                   </div>
                 )}
-                <DocumentEditor
-                  sections={sections}
-                  onSectionChange={handleSectionChange}
-                  onRegenerate={handleRegenerate}
-                  onAccept={handleAccept}
-                  regeneratingSection={regeneratingSection}
-                  acceptedSection={acceptedSection}
-                />
+                {generateMutation.isPending && sections.length === 0 ? (
+                  <ContentSkeleton />
+                ) : (
+                  <DocumentEditor
+                    sections={sections}
+                    onSectionChange={handleSectionChange}
+                    onRegenerate={handleRegenerate}
+                    onAccept={handleAccept}
+                    regeneratingSection={regeneratingSection}
+                    acceptedSection={acceptedSection}
+                  />
+                )}
               </section>
             </>
           )}
@@ -798,6 +846,9 @@ function App() {
           onClose={() => setPreviewDocumentId(null)}
         />
       )}
+
+      {/* Toast Notifications */}
+      <Toast toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 }

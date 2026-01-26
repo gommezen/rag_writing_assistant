@@ -1,12 +1,14 @@
 # RAG Writing Assistant
 
-Generate AI-written content grounded in your own documents, with full source transparency.
+Your own AI document analysis and writing assistant you can verify. Every claim cites its sources.
+
+![RAG Writing Assistant Screenshot](docs/screenshot.png)
 
 ## Features
 
 - **Document upload** - PDF, DOCX, and TXT with drag-and-drop support (non-blocking)
 - **Grounded generation** - AI content derived from your uploaded materials
-- **Source citations** - Every claim traced back to retrieved documents
+- **Interactive citations** - Hover to preview source, click to navigate to full context
 - **Confidence indicators** - Visual cues for high/medium/low confidence content
 - **Section-level editing** - Regenerate or manually edit individual sections
 - **Coverage transparency** - See exactly what % of your documents were analyzed

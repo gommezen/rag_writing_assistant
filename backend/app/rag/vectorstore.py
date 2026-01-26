@@ -35,9 +35,11 @@ class VectorStore:
         self.index: faiss.IndexFlatIP | None = None
         self.chunks: list[DocumentChunk] = []
         self.embedding_service = get_embedding_service()
+        self._stored_embedding_model: str | None = None  # Model used for stored embeddings
 
         self._index_path = self.store_path / "index.faiss"
         self._metadata_path = self.store_path / "metadata.pkl"
+        self._model_path = self.store_path / "embedding_model.txt"
 
         # Load existing index if available
         self._load()
@@ -49,9 +51,25 @@ class VectorStore:
                 self.index = faiss.read_index(str(self._index_path))
                 with open(self._metadata_path, "rb") as f:
                     self.chunks = pickle.load(f)
+
+                # Load stored embedding model if available
+                if self._model_path.exists():
+                    with open(self._model_path, "r") as f:
+                        self._stored_embedding_model = f.read().strip()
+
+                # Warn if embedding model has changed
+                current_model = self.embedding_service.model
+                if self._stored_embedding_model and self._stored_embedding_model != current_model:
+                    logger.warning(
+                        "Embedding model mismatch - consider running migration",
+                        stored_model=self._stored_embedding_model,
+                        current_model=current_model,
+                    )
+
                 logger.info(
                     "Loaded vector store",
                     chunk_count=len(self.chunks),
+                    embedding_model=self._stored_embedding_model or "unknown",
                 )
             except Exception as e:
                 logger.warning(
@@ -71,9 +89,16 @@ class VectorStore:
             faiss.write_index(self.index, str(self._index_path))
             with open(self._metadata_path, "wb") as f:
                 pickle.dump(self.chunks, f)
+
+            # Store embedding model for future compatibility checking
+            with open(self._model_path, "w") as f:
+                f.write(self.embedding_service.model)
+            self._stored_embedding_model = self.embedding_service.model
+
             logger.info(
                 "Saved vector store",
                 chunk_count=len(self.chunks),
+                embedding_model=self.embedding_service.model,
             )
         except Exception as e:
             logger.error("Failed to save vector store", error=str(e))
@@ -245,6 +270,7 @@ class VectorStore:
             "total_chunks": len(self.chunks),
             "total_documents": len(document_ids),
             "index_trained": self.index is not None,
+            "embedding_model": self._stored_embedding_model or self.embedding_service.model,
         }
 
 

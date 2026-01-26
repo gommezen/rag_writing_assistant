@@ -5,14 +5,16 @@
  * - Distinguishes AI-generated content from user-edited content
  * - Shows sources and confidence for each section
  * - Allows section-level regeneration and editing
+ * - Interactive citations link to source cards (governance: explain AI output)
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import type { GeneratedSection } from '../../types';
 import { ConfidenceIndicator } from '../ConfidenceIndicator';
 import { GenerationControls } from '../GenerationControls';
 import { SourceCard } from '../SourceCard';
 import { WarningBanner } from '../WarningBanner';
+import { renderCitationsInText } from '../../utils/citationParser';
 import './DocumentEditor.css';
 
 interface DocumentEditorProps {
@@ -37,6 +39,11 @@ export function DocumentEditor({
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(
     sections[0]?.section_id ?? null
   );
+  const [highlightedSourceIndex, setHighlightedSourceIndex] = useState<number | null>(null);
+  const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
+
+  // Refs for source cards to enable scroll-to-source
+  const sourceRefs = useRef<Map<number, HTMLElement>>(new Map());
 
   // Update selection when sections change (e.g., new generation)
   useEffect(() => {
@@ -58,12 +65,33 @@ export function DocumentEditor({
     setSelectedSectionId(sectionId);
   }, []);
 
-  const handleContentChange = useCallback(
-    (e: React.ChangeEvent<HTMLTextAreaElement>, sectionId: string) => {
-      onSectionChange(sectionId, e.target.value);
-    },
-    [onSectionChange]
-  );
+  const handleCitationClick = useCallback((index: number) => {
+    // Highlight the source card
+    setHighlightedSourceIndex(index);
+
+    // Scroll to the source card
+    const sourceRef = sourceRefs.current.get(index);
+    if (sourceRef) {
+      sourceRef.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    // Clear highlight after animation
+    setTimeout(() => setHighlightedSourceIndex(null), 2000);
+  }, []);
+
+  const handleEditToggle = useCallback((sectionId: string) => {
+    setEditingSectionId((prev) => (prev === sectionId ? null : sectionId));
+  }, []);
+
+  const handleEditSave = useCallback((sectionId: string, content: string) => {
+    onSectionChange(sectionId, content);
+    setEditingSectionId(null);
+  }, [onSectionChange]);
+
+  // Clear source refs when section changes
+  useEffect(() => {
+    sourceRefs.current.clear();
+  }, [selectedSectionId]);
 
   if (sections.length === 0) {
     return (
@@ -86,8 +114,11 @@ export function DocumentEditor({
             isSelected={section.section_id === selectedSectionId}
             isRegenerating={regeneratingSection === section.section_id}
             isAccepted={acceptedSection === section.section_id}
+            isEditing={editingSectionId === section.section_id}
             onClick={() => handleSectionClick(section.section_id)}
-            onChange={(e) => handleContentChange(e, section.section_id)}
+            onCitationClick={handleCitationClick}
+            onEditToggle={() => handleEditToggle(section.section_id)}
+            onEditSave={(content) => handleEditSave(section.section_id, content)}
             onRegenerate={onRegenerate}
             onAccept={onAccept}
             {...(onRevert ? { onRevert } : {})}
@@ -97,7 +128,11 @@ export function DocumentEditor({
 
       <aside className="document-editor__sidebar">
         {selectedSection && (
-          <SectionDetails section={selectedSection} />
+          <SectionDetails
+            section={selectedSection}
+            highlightedSourceIndex={highlightedSourceIndex}
+            sourceRefs={sourceRefs}
+          />
         )}
       </aside>
     </div>
@@ -110,8 +145,11 @@ interface SectionEditorProps {
   isSelected: boolean;
   isRegenerating: boolean;
   isAccepted?: boolean;
+  isEditing: boolean;
   onClick: () => void;
-  onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
+  onCitationClick: (index: number) => void;
+  onEditToggle: () => void;
+  onEditSave: (content: string) => void;
   onRegenerate: (sectionId: string) => void;
   onAccept: (sectionId: string) => void;
   onRevert?: (sectionId: string) => void;
@@ -123,12 +161,31 @@ function SectionEditor({
   isSelected,
   isRegenerating,
   isAccepted,
+  isEditing,
   onClick,
-  onChange,
+  onCitationClick,
+  onEditToggle,
+  onEditSave,
   onRegenerate,
   onAccept,
   onRevert,
 }: SectionEditorProps) {
+  const [editContent, setEditContent] = useState(section.content);
+
+  // Sync edit content when section content changes (e.g., after regeneration)
+  useEffect(() => {
+    setEditContent(section.content);
+  }, [section.content]);
+
+  const handleEditSave = () => {
+    onEditSave(editContent);
+  };
+
+  const handleEditCancel = () => {
+    setEditContent(section.content);
+    onEditToggle();
+  };
+
   return (
     <section
       className={`section-editor ${isSelected ? 'section-editor--selected' : ''} ${
@@ -147,17 +204,63 @@ function SectionEditor({
             <span className="section-editor__accepted-badge">Accepted!</span>
           )}
         </span>
-        <ConfidenceIndicator level={section.confidence} />
+        <div className="section-editor__header-actions">
+          <ConfidenceIndicator level={section.confidence} />
+          {!isEditing && !isRegenerating && (
+            <button
+              className="section-editor__edit-button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEditToggle();
+              }}
+              aria-label="Edit section"
+            >
+              Edit
+            </button>
+          )}
+        </div>
       </header>
 
-      <textarea
-        className="section-editor__textarea"
-        value={section.content}
-        onChange={onChange}
-        placeholder="Section content..."
-        disabled={isRegenerating}
-        aria-label={`Content for ${section.title || `section ${index + 1}`}`}
-      />
+      {isEditing ? (
+        <div className="section-editor__edit-mode">
+          <textarea
+            className="section-editor__textarea"
+            value={editContent}
+            onChange={(e) => setEditContent(e.target.value)}
+            placeholder="Section content..."
+            disabled={isRegenerating}
+            aria-label={`Edit content for ${section.title || `section ${index + 1}`}`}
+            autoFocus
+          />
+          <div className="section-editor__edit-actions">
+            <button
+              className="section-editor__save-button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleEditSave();
+              }}
+            >
+              Save
+            </button>
+            <button
+              className="section-editor__cancel-button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleEditCancel();
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div
+          className="section-editor__content"
+          aria-label={`Content for ${section.title || `section ${index + 1}`}`}
+        >
+          {renderCitationsInText(section.content, section.sources, onCitationClick)}
+        </div>
+      )}
 
       {section.warnings.length > 0 && (
         <WarningBanner warnings={section.warnings} />
@@ -177,9 +280,22 @@ function SectionEditor({
 
 interface SectionDetailsProps {
   section: GeneratedSection;
+  highlightedSourceIndex: number | null;
+  sourceRefs: React.MutableRefObject<Map<number, HTMLElement>>;
 }
 
-function SectionDetails({ section }: SectionDetailsProps) {
+function SectionDetails({ section, highlightedSourceIndex, sourceRefs }: SectionDetailsProps) {
+  const setSourceRef = useCallback(
+    (index: number) => (el: HTMLElement | null) => {
+      if (el) {
+        sourceRefs.current.set(index, el);
+      } else {
+        sourceRefs.current.delete(index);
+      }
+    },
+    [sourceRefs]
+  );
+
   return (
     <div className="section-details">
       <h2 className="section-details__title">Sources</h2>
@@ -193,8 +309,10 @@ function SectionDetails({ section }: SectionDetailsProps) {
           {section.sources.map((source, index) => (
             <SourceCard
               key={source.chunk_id}
+              ref={setSourceRef(index + 1)}
               source={source}
               index={index + 1}
+              isHighlighted={highlightedSourceIndex === index + 1}
             />
           ))}
         </div>

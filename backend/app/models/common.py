@@ -21,6 +21,13 @@ class ConfidenceLevel(str, Enum):
     UNKNOWN = "unknown"
 
 
+class RetrievalConfidenceLevel(str, Enum):
+    """Confidence levels for retrieval quality, used for model routing."""
+    HIGH = "high"      # Strong relevance - use fast model
+    MEDIUM = "medium"  # Moderate relevance - use standard model
+    LOW = "low"        # Low relevance - use quality model with uncertainty prompts
+
+
 class RetrievalType(str, Enum):
     """Type of retrieval strategy used."""
     SIMILARITY = "similarity"
@@ -287,3 +294,45 @@ class WarningType:
     POTENTIAL_HALLUCINATION = "potential_hallucination"
     OUTDATED_SOURCES = "outdated_sources"
     CONFLICTING_SOURCES = "conflicting_sources"
+
+
+@dataclass
+class RetrievalConfidenceMetrics:
+    """Metrics used to compute retrieval confidence for model routing."""
+    avg_relevance_score: float
+    max_relevance_score: float
+    high_quality_chunk_count: int  # Chunks above 0.70 threshold
+    coverage_percentage: float
+    source_diversity: float  # 1 - max_doc_proportion (higher = more diverse)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "avg_relevance_score": round(self.avg_relevance_score, 3),
+            "max_relevance_score": round(self.max_relevance_score, 3),
+            "high_quality_chunk_count": self.high_quality_chunk_count,
+            "coverage_percentage": round(self.coverage_percentage, 1),
+            "source_diversity": round(self.source_diversity, 3),
+        }
+
+
+@dataclass
+class RetrievalConfidence:
+    """Retrieval confidence assessment for model routing.
+
+    Computed BEFORE generation to determine which model to use:
+    - HIGH confidence: Use fast model (gemma3:4b)
+    - MEDIUM confidence: Use standard model (qwen:7b)
+    - LOW confidence: Use quality model (llama:8b) with uncertainty prompts
+    """
+    level: RetrievalConfidenceLevel
+    metrics: RetrievalConfidenceMetrics
+    reasoning: str
+    suggested_model: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "level": self.level.value,
+            "metrics": self.metrics.to_dict(),
+            "reasoning": self.reasoning,
+            "suggested_model": self.suggested_model,
+        }
