@@ -1,6 +1,6 @@
 # RAG Writing Assistant
 
-Your own AI document analysis and writing assistant you can verify. Every claim cites its sources.
+A transparent AI writing assistant that grounds every claim in your documents. Hover any citation to preview the source, click to verify the full context—so you always know exactly where the AI got its information.
 
 ![RAG Writing Assistant Screenshot](docs/screenshot.png)
 
