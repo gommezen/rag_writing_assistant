@@ -61,6 +61,30 @@
   margin-bottom: var(--spacing-sm);
 }
 
+.section-editor__header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.section-editor__edit-button {
+  padding: 4px 8px;
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.section-editor__edit-button:hover {
+  color: var(--color-text);
+  background: var(--color-bg-tertiary);
+  border-color: var(--color-text-muted);
+}
+
 .section-editor__label {
   display: flex;
   align-items: center;
@@ -127,6 +151,66 @@
 .section-editor__textarea:disabled {
   opacity: 0.7;
   cursor: not-allowed;
+}
+
+/* Content display (non-edit mode) */
+.section-editor__content {
+  padding: var(--spacing-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  line-height: 1.6;
+  color: var(--color-text);
+  background: var(--color-bg);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+/* Edit mode container */
+.section-editor__edit-mode {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.section-editor__edit-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  justify-content: flex-end;
+}
+
+.section-editor__save-button,
+.section-editor__cancel-button {
+  padding: 6px 12px;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.section-editor__save-button {
+  color: white;
+  background: var(--color-primary);
+  border: 1px solid var(--color-primary);
+}
+
+.section-editor__save-button:hover {
+  background: var(--color-primary-dark);
+  border-color: var(--color-primary-dark);
+}
+
+.section-editor__cancel-button {
+  color: var(--color-text-secondary);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+}
+
+.section-editor__cancel-button:hover {
+  color: var(--color-text);
+  background: var(--color-bg-secondary);
+  border-color: var(--color-text-muted);
 }
 
 /* Section Details */
