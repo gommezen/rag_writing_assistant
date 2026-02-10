@@ -1,4 +1,4 @@
-"""RAG Writing Assistant backend application."""
+"""RAG Document Intelligence backend application."""
 
 from .main import app
 

@@ -1,4 +1,4 @@
-"""Core utilities for the RAG writing assistant."""
+"""Core utilities for RAG Document Intelligence."""
 
 from .exceptions import (
     ConfigurationError,

@@ -1,4 +1,4 @@
-"""Common data models used across the RAG writing assistant.
+"""Common data models used across RAG Document Intelligence.
 
 These models form the foundation for all services and ensure RAG metadata
 (sources, confidence, warnings) is never silently dropped.

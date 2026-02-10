@@ -1,4 +1,4 @@
-"""API module for the RAG writing assistant."""
+"""API module for RAG Document Intelligence."""
 
 from .routes import chat_router, documents_router, generation_router, health_router
 

@@ -1,4 +1,4 @@
-"""Custom exceptions for the RAG writing assistant.
+"""Custom exceptions for RAG Document Intelligence.
 
 These exceptions provide clear error categories for proper handling at the API layer.
 """

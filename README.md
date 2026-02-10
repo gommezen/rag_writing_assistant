@@ -1,4 +1,4 @@
-# RAG Writing Assistant
+# RAG Document Intelligence
 
 ![Python](https://img.shields.io/badge/Python-3.11+-blue)
 ![React](https://img.shields.io/badge/React-18-61DAFB)
@@ -9,7 +9,7 @@
 
 A transparent AI writing assistant that grounds every claim in your documents. Hover any citation to preview the source, click to verify the full context — so you always know exactly where the AI got its information.
 
-![RAG Writing Assistant Screenshot](docs/screenshot.png)
+![RAG Document Intelligence Screenshot](docs/screenshot.png)
 
 ## Features
 

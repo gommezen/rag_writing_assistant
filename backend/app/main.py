@@ -20,19 +20,19 @@ settings = get_settings()
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan: startup and shutdown logic."""
     logger.info(
-        "Starting RAG Writing Assistant",
+        "Starting RAG Document Intelligence",
         ollama_url=settings.ollama_base_url,
         embedding_model=settings.embedding_model,
         generation_model=settings.generation_model,
     )
     settings.ensure_directories()
     yield
-    logger.info("Shutting down RAG Writing Assistant")
+    logger.info("Shutting down RAG Document Intelligence")
 
 
 app = FastAPI(
-    title="RAG Writing Assistant",
-    description="A governance-first RAG writing assistant for enterprise use",
+    title="RAG Document Intelligence",
+    description="A governance-first RAG document intelligence platform for enterprise use",
     version="0.1.0",
     docs_url="/docs",
     redoc_url="/redoc",

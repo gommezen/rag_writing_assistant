@@ -1,5 +1,5 @@
 /**
- * Main App component for the RAG Writing Assistant.
+ * Main App component for RAG Document Intelligence.
  *
  * Layout: Three-panel design
  * - Left sidebar: Document management
@@ -531,7 +531,7 @@ function App() {
               <path d="M32 38L28 44L32 48L36 44Z" fill={darkMode ? '#0d9488' : '#0d9488'} />
             </svg>
           </div>
-          <h1 className="app__title">RAG Writing Assistant</h1>
+          <h1 className="app__title">RAG Document Intelligence</h1>
         </div>
         <div className="app__header-controls">
           {/* Mode Toggle */}

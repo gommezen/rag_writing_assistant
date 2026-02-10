@@ -3,14 +3,14 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "rag-writing-assistant"
+name = "rag-document-intelligence"
 version = "0.1.0"
-description = "A governance-first RAG writing assistant for enterprise use"
+description = "A governance-first RAG document intelligence platform for enterprise use"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
 authors = [
-    {name = "RAG Writing Assistant Team"}
+    {name = "RAG Document Intelligence Team"}
 ]
 
 dependencies = [

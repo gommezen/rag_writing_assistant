@@ -1,4 +1,4 @@
-"""Services for the RAG writing assistant."""
+"""Services for RAG Document Intelligence."""
 
 from .chat import ChatService, get_chat_service
 from .confidence import ConfidenceService, get_confidence_service, LOW_CONFIDENCE_SUFFIX

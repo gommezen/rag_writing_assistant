@@ -1,5 +1,5 @@
 /**
- * API client for the RAG Writing Assistant backend.
+ * API client for the RAG Document Intelligence backend.
  */
 
 import type {

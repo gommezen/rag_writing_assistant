@@ -1,4 +1,4 @@
-"""Data models for the RAG writing assistant."""
+"""Data models for RAG Document Intelligence."""
 
 from .common import (
     ConfidenceLevel,
