@@ -528,12 +528,12 @@ class TestRAGMetadataVerification:
 
                                         for section in result["sections"]:
                                             # Critical: sources must NEVER be null
-                                            assert (
-                                                section["sources"] is not None
-                                            ), "sources should never be null"
-                                            assert isinstance(
-                                                section["sources"], list
-                                            ), "sources should be a list"
+                                            assert section["sources"] is not None, (
+                                                "sources should never be null"
+                                            )
+                                            assert isinstance(section["sources"], list), (
+                                                "sources should be a list"
+                                            )
 
         self._reset_singletons()
 
