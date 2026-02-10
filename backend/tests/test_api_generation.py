@@ -58,7 +58,7 @@ class TestGenerateDraft:
 
                                     def patched_init(self):
                                         original_init(self)
-                                        self._llm = mock_llm
+                                        self._get_or_create_llm = lambda model: mock_llm
 
                                     with patch.object(GenerationService, "__init__", patched_init):
                                         # Generate a draft
@@ -118,7 +118,7 @@ class TestGenerateDraft:
 
                                     def patched_init(self):
                                         original_init(self)
-                                        self._llm = mock_llm
+                                        self._get_or_create_llm = lambda model: mock_llm
 
                                     with patch.object(GenerationService, "__init__", patched_init):
                                         response = client.post(
@@ -207,7 +207,7 @@ class TestGenerateDraft:
 
                                     def patched_init(self):
                                         original_init(self)
-                                        self._llm = failing_llm
+                                        self._get_or_create_llm = lambda model: failing_llm
 
                                     with patch.object(GenerationService, "__init__", patched_init):
                                         response = client.post(
@@ -256,7 +256,7 @@ class TestGenerateDraft:
 
                                     def patched_init(self):
                                         original_init(self)
-                                        self._llm = mock_llm
+                                        self._get_or_create_llm = lambda model: mock_llm
 
                                     with patch.object(GenerationService, "__init__", patched_init):
                                         response = client.post(
@@ -328,7 +328,7 @@ class TestRegenerateSection:
 
                                     def patched_init(self):
                                         original_init(self)
-                                        self._llm = mock_llm
+                                        self._get_or_create_llm = lambda model: mock_llm
 
                                     with patch.object(GenerationService, "__init__", patched_init):
                                         response = client.post(
@@ -406,7 +406,7 @@ class TestGenerationMetadata:
 
                                     def patched_init(self):
                                         original_init(self)
-                                        self._llm = mock_llm
+                                        self._get_or_create_llm = lambda model: mock_llm
 
                                     with patch.object(GenerationService, "__init__", patched_init):
                                         response = client.post(
@@ -454,7 +454,7 @@ class TestGenerationMetadata:
 
                                     def patched_init(self):
                                         original_init(self)
-                                        self._llm = mock_llm
+                                        self._get_or_create_llm = lambda model: mock_llm
 
                                     with patch.object(GenerationService, "__init__", patched_init):
                                         response = client.post(
@@ -517,7 +517,7 @@ class TestRAGMetadataVerification:
 
                                     def patched_init(self):
                                         original_init(self)
-                                        self._llm = mock_llm
+                                        self._get_or_create_llm = lambda model: mock_llm
 
                                     with patch.object(GenerationService, "__init__", patched_init):
                                         response = client.post(
@@ -568,7 +568,7 @@ class TestRAGMetadataVerification:
 
                                     def patched_init(self):
                                         original_init(self)
-                                        self._llm = mock_llm
+                                        self._get_or_create_llm = lambda model: mock_llm
 
                                     with patch.object(GenerationService, "__init__", patched_init):
                                         response = client.post(
@@ -619,7 +619,7 @@ class TestRAGMetadataVerification:
 
                                     def patched_init(self):
                                         original_init(self)
-                                        self._llm = mock_llm
+                                        self._get_or_create_llm = lambda model: mock_llm
 
                                     with patch.object(GenerationService, "__init__", patched_init):
                                         response = client.post(

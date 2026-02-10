@@ -255,7 +255,7 @@ class TestGenerationErrors:
 
                                 with patch("app.services.generation.get_validation_service"):
                                     service = GenerationService()
-                                    service._llm_cache[mock_settings.generation_model] = failing_llm
+                                    service._get_or_create_llm = lambda model: failing_llm
 
                                     with pytest.raises(LLMError):
                                         await service.generate(
