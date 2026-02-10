@@ -11,6 +11,8 @@ from datetime import UTC, datetime
 from unittest.mock import patch
 
 import pytest
+from fastapi.testclient import TestClient
+
 from app.models import (
     ChatMessage,
     ChatRequest,
@@ -19,7 +21,6 @@ from app.models import (
     CoverageDescriptor,
     RetrievalType,
 )
-from fastapi.testclient import TestClient
 
 # ============================================================================
 # ChatMessage Model Tests

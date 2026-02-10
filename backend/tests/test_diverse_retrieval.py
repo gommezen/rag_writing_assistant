@@ -9,6 +9,7 @@ Verifies that:
 from unittest.mock import MagicMock, patch
 
 import pytest
+
 from app.models import (
     CoverageDescriptor,
     DocumentCoverage,

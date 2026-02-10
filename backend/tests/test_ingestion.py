@@ -4,6 +4,7 @@ import io
 from unittest.mock import patch
 
 import pytest
+
 from app.core import DocumentProcessingError, UnsupportedDocumentTypeError
 from app.models import DocumentStatus, DocumentType
 from app.services.ingestion import IngestionService

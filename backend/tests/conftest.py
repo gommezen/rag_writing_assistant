@@ -12,6 +12,8 @@ from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 import pytest
+from fastapi.testclient import TestClient
+
 from app.config import Settings
 from app.models import (
     ChunkingConfig,
@@ -25,7 +27,6 @@ from app.models import (
     RetrievalMetadata,
     SourceReference,
 )
-from fastapi.testclient import TestClient
 
 # ============================================================================
 # Mock Classes for External Services

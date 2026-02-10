@@ -7,6 +7,7 @@ Verifies that queries are correctly classified as:
 """
 
 import pytest
+
 from app.models import QueryIntent, RetrievalType, SummaryScope
 from app.services.intent import IntentService, get_intent_service
 
