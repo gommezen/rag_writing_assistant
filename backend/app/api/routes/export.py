@@ -144,9 +144,7 @@ async def export_document(req: ExportRequest) -> StreamingResponse:
     try:
         if req.format == ExportFormat.DOCX:
             buf = _export_docx(req)
-            media_type = (
-                "application/vnd.openxmlformats-officedocument" ".wordprocessingml.document"
-            )
+            media_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             ext = "docx"
         else:
             buf = _export_pdf(req)

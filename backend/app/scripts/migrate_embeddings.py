@@ -214,9 +214,9 @@ def run_migration(
     Returns:
         True if migration succeeded
     """
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("Embedding Migration Script")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     print(f"Vectors directory: {vectors_dir}")
     print(f"New embedding model: {new_model}")
     print()
@@ -264,9 +264,9 @@ def run_migration(
 
     # Step 6: Verify
     if verify_integrity(vectors_dir, len(chunks)):
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print("Migration completed successfully!")
-        print(f"{'='*60}\n")
+        print(f"{'=' * 60}\n")
         return True
     else:
         print("\nMigration verification failed!")
