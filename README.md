@@ -1,5 +1,12 @@
 # RAG Writing Assistant
 
+![Python](https://img.shields.io/badge/Python-3.11+-blue)
+![React](https://img.shields.io/badge/React-18-61DAFB)
+![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-009688)
+![License](https://img.shields.io/badge/License-MIT-green)
+![Ollama](https://img.shields.io/badge/LLM-Ollama_(local)-black)
+
 A transparent AI writing assistant that grounds every claim in your documents. Hover any citation to preview the source, click to verify the full context — so you always know exactly where the AI got its information.
 
 ![RAG Writing Assistant Screenshot](docs/screenshot.png)

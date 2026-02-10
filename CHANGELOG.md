@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.5] - 2026-02-10
+
+### Fixed
+- FastAPI deprecation warnings — migrated from `@app.on_event` to `lifespan` context manager
+- Documents not loading on startup when frontend starts before backend (retry with exponential backoff)
+
+### Added
+- Generation progress indicator with animated stage messages and elapsed timer
+- README badges (Python, React, TypeScript, FastAPI, License, Ollama)
+
+### Changed
+- Rewrite README with clearer structure: installation, running, configuration, project structure, tech stack
+- Updated screenshot
+
+---
+
 ## [0.2.4] - 2026-01-26
 
 ### Added
