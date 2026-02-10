@@ -13,6 +13,8 @@ export function useDocuments() {
   return useQuery({
     queryKey: DOCUMENTS_KEY,
     queryFn: () => apiClient.listDocuments(),
+    retry: true,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 10000),
   });
 }
 
