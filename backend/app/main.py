@@ -1,5 +1,8 @@
 """FastAPI application entry point."""
 
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -12,12 +15,28 @@ logger = get_logger(__name__)
 
 settings = get_settings()
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    """Application lifespan: startup and shutdown logic."""
+    logger.info(
+        "Starting RAG Writing Assistant",
+        ollama_url=settings.ollama_base_url,
+        embedding_model=settings.embedding_model,
+        generation_model=settings.generation_model,
+    )
+    settings.ensure_directories()
+    yield
+    logger.info("Shutting down RAG Writing Assistant")
+
+
 app = FastAPI(
     title="RAG Writing Assistant",
     description="A governance-first RAG writing assistant for enterprise use",
     version="0.1.0",
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 # Configure CORS
@@ -55,25 +74,6 @@ app.include_router(documents_router, prefix="/api")
 app.include_router(generation_router, prefix="/api")
 app.include_router(chat_router, prefix="/api")
 
-
-@app.on_event("startup")
-async def startup_event() -> None:
-    """Initialize services on startup."""
-    logger.info(
-        "Starting RAG Writing Assistant",
-        ollama_url=settings.ollama_base_url,
-        embedding_model=settings.embedding_model,
-        generation_model=settings.generation_model,
-    )
-
-    # Ensure data directories exist
-    settings.ensure_directories()
-
-
-@app.on_event("shutdown")
-async def shutdown_event() -> None:
-    """Cleanup on shutdown."""
-    logger.info("Shutting down RAG Writing Assistant")
 
 
 if __name__ == "__main__":

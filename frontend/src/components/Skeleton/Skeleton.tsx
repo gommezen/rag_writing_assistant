@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import './Skeleton.css';
 
 interface SkeletonProps {
@@ -56,6 +57,40 @@ export function ContentSkeleton() {
       <Skeleton variant="text" width="100%" height={16} />
       <Skeleton variant="text" width="92%" height={16} />
       <Skeleton variant="text" width="88%" height={16} />
+    </div>
+  );
+}
+
+const GENERATION_STAGES = [
+  'Analyzing your prompt...',
+  'Retrieving relevant content...',
+  'Generating draft...',
+  'Finalizing sections...',
+];
+
+const STAGE_INTERVAL_MS = 3000;
+
+export function GenerationProgress() {
+  const [elapsed, setElapsed] = useState(0);
+  const [stageIndex, setStageIndex] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => setElapsed((s) => s + 1), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setStageIndex((i) => Math.min(i + 1, GENERATION_STAGES.length - 1));
+    }, STAGE_INTERVAL_MS);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <div className="generation-progress">
+      <div className="generation-progress__spinner" />
+      <p className="generation-progress__stage">{GENERATION_STAGES[stageIndex]}</p>
+      <p className="generation-progress__elapsed">{elapsed}s elapsed</p>
     </div>
   );
 }

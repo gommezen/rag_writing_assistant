@@ -1,1 +1,1 @@
-export { Skeleton, DocumentListSkeleton, ContentSkeleton } from './Skeleton';
+export { Skeleton, DocumentListSkeleton, ContentSkeleton, GenerationProgress } from './Skeleton';

@@ -15,7 +15,7 @@ import { WarningBanner } from './components/WarningBanner';
 import { ChatView } from './components/ChatView';
 import { ConversationHistory } from './components/ConversationHistory';
 import { Toast, ToastMessage } from './components/Toast';
-import { DocumentListSkeleton, ContentSkeleton } from './components/Skeleton';
+import { DocumentListSkeleton, GenerationProgress } from './components/Skeleton';
 import {
   useDocuments,
   useDocumentChunks,
@@ -820,7 +820,7 @@ function App() {
                   </div>
                 )}
                 {generateMutation.isPending && sections.length === 0 ? (
-                  <ContentSkeleton />
+                  <GenerationProgress />
                 ) : (
                   <DocumentEditor
                     sections={sections}
