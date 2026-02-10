@@ -9,6 +9,7 @@ import { MessageSquare, Info } from 'lucide-react';
 import type { ChatMessage as ChatMessageType, CoverageDescriptor, ContextUsed } from '../../types';
 import { ChatMessage } from './ChatMessage';
 import { ChatInput } from './ChatInput';
+import { ChatProgress } from '../Skeleton/Skeleton';
 import './ChatView.css';
 
 interface ChatViewProps {
@@ -77,11 +78,7 @@ export function ChatView({
             ))}
             {isLoading && (
               <div className="chat-view__loading">
-                <div className="chat-view__loading-dots">
-                  <span></span>
-                  <span></span>
-                  <span></span>
-                </div>
+                <ChatProgress />
               </div>
             )}
             <div ref={messagesEndRef} />

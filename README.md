@@ -61,7 +61,7 @@ Start both services in separate terminals:
 ```bash
 # Terminal 1 - Backend
 cd backend
-uvicorn app.main:app --reload
+python -m uvicorn app.main:app --port 8001 --reload
 
 # Terminal 2 - Frontend
 cd frontend

@@ -138,6 +138,17 @@ export function useDeleteDocument() {
   });
 }
 
+export function useRetryDocument() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (documentId: string) => apiClient.retryDocument(documentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: DOCUMENTS_KEY });
+    },
+  });
+}
+
 export function useDocumentChunks(documentId: string | null) {
   return useQuery({
     queryKey: [...DOCUMENTS_KEY, documentId, 'chunks'],

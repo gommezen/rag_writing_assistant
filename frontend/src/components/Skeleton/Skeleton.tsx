@@ -61,6 +61,54 @@ export function ContentSkeleton() {
   );
 }
 
+export function ConversationHistorySkeleton() {
+  return (
+    <div className="conversation-history-skeleton">
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="conversation-item-skeleton">
+          <Skeleton variant="text" width="85%" height={14} />
+          <Skeleton variant="text" width="60%" height={12} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const CHAT_STAGES = [
+  'Searching your documents...',
+  'Finding relevant passages...',
+  'Formulating response...',
+];
+
+const CHAT_STAGE_INTERVAL_MS = 3000;
+
+export function ChatProgress() {
+  const [elapsed, setElapsed] = useState(0);
+  const [stageIndex, setStageIndex] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => setElapsed((s) => s + 1), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setStageIndex((i) => Math.min(i + 1, CHAT_STAGES.length - 1));
+    }, CHAT_STAGE_INTERVAL_MS);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <div className="chat-progress">
+      <div className="chat-progress__spinner" />
+      <div className="chat-progress__text">
+        <p className="chat-progress__stage">{CHAT_STAGES[stageIndex]}</p>
+        <p className="chat-progress__elapsed">{elapsed}s</p>
+      </div>
+    </div>
+  );
+}
+
 const GENERATION_STAGES = [
   'Analyzing your prompt...',
   'Retrieving relevant content...',

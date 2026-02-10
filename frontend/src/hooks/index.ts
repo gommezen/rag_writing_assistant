@@ -8,6 +8,7 @@ export {
   useDocumentChunks,
   useDocumentPolling,
   useDocuments,
+  useRetryDocument,
   useUploadDocument,
   useUploadFromUrl,
 } from './useDocuments';

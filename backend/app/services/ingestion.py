@@ -182,6 +182,16 @@ class IngestionService:
             logger.error("Document not found for background processing", document_id=document_id)
             return
 
+        # Save file to uploads directory for retry capability
+        try:
+            upload_path = (
+                self.settings.uploads_dir / f"{document_id}{Path(document.filename).suffix}"
+            )
+            with open(upload_path, "wb") as f:
+                f.write(file_content)
+        except Exception as e:
+            logger.warning("Failed to save upload for retry", document_id=document_id, error=str(e))
+
         # Update status to PROCESSING
         document.status = DocumentStatus.PROCESSING
         document.updated_at = datetime.now(UTC)

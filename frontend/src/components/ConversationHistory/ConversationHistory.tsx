@@ -6,10 +6,12 @@
  * - View past conversations
  * - Resume a previous conversation
  * - Delete conversations
+ * - Edit conversation titles
  */
 
-import { useState } from 'react';
-import { MessageSquare, Trash2, Plus, Clock } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { MessageSquare, Trash2, Plus, Clock, Pencil } from 'lucide-react';
+import { ConversationHistorySkeleton } from '../Skeleton/Skeleton';
 import type { ConversationSummary } from '../../types';
 import './ConversationHistory.css';
 
@@ -18,6 +20,7 @@ interface ConversationHistoryProps {
   currentConversationId: string | null;
   onSelect: (conversationId: string) => void;
   onDelete: (conversationId: string) => void;
+  onUpdateTitle: (conversationId: string, title: string) => void;
   onNewChat: () => void;
   isLoading: boolean;
 }
@@ -27,10 +30,49 @@ export function ConversationHistory({
   currentConversationId,
   onSelect,
   onDelete,
+  onUpdateTitle,
   onNewChat,
   isLoading,
 }: ConversationHistoryProps) {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState('');
+  const editInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editingId && editInputRef.current) {
+      editInputRef.current.focus();
+      editInputRef.current.select();
+    }
+  }, [editingId]);
+
+  const handleStartEdit = (e: React.MouseEvent, conversationId: string, currentTitle: string) => {
+    e.stopPropagation();
+    setEditingId(conversationId);
+    setEditingTitle(currentTitle);
+  };
+
+  const handleSaveEdit = (conversationId: string) => {
+    const trimmed = editingTitle.trim();
+    if (trimmed && trimmed !== conversations.find((c) => c.conversation_id === conversationId)?.title) {
+      onUpdateTitle(conversationId, trimmed);
+    }
+    setEditingId(null);
+    setEditingTitle('');
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditingTitle('');
+  };
+
+  const handleEditKeyDown = (e: React.KeyboardEvent, conversationId: string) => {
+    if (e.key === 'Enter') {
+      handleSaveEdit(conversationId);
+    } else if (e.key === 'Escape') {
+      handleCancelEdit();
+    }
+  };
 
   const handleDelete = (e: React.MouseEvent, conversationId: string) => {
     e.stopPropagation();
@@ -73,7 +115,7 @@ export function ConversationHistory({
       </button>
 
       {isLoading ? (
-        <div className="conversation-history__loading">Loading conversations...</div>
+        <ConversationHistorySkeleton />
       ) : conversations.length === 0 ? (
         <div className="conversation-history__empty">
           <MessageSquare size={24} />
@@ -100,7 +142,31 @@ export function ConversationHistory({
               }}
             >
               <div className="conversation-history__item-content">
-                <span className="conversation-history__title">{conv.title}</span>
+                {editingId === conv.conversation_id ? (
+                  <input
+                    ref={editInputRef}
+                    type="text"
+                    className="conversation-history__title-input"
+                    value={editingTitle}
+                    onChange={(e) => setEditingTitle(e.target.value)}
+                    onBlur={() => handleSaveEdit(conv.conversation_id)}
+                    onKeyDown={(e) => handleEditKeyDown(e, conv.conversation_id)}
+                    onClick={(e) => e.stopPropagation()}
+                    maxLength={200}
+                  />
+                ) : (
+                  <div className="conversation-history__title-row">
+                    <span className="conversation-history__title">{conv.title}</span>
+                    <button
+                      type="button"
+                      className="conversation-history__edit"
+                      onClick={(e) => handleStartEdit(e, conv.conversation_id, conv.title)}
+                      aria-label="Edit title"
+                    >
+                      <Pencil size={12} />
+                    </button>
+                  </div>
+                )}
                 <span className="conversation-history__meta">
                   <Clock size={12} />
                   {formatTimestamp(conv.updated_at)}

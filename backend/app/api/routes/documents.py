@@ -1,12 +1,16 @@
 """Document management endpoints."""
 
 import asyncio
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 
+from ...config import get_settings
 from ...core import UnsupportedDocumentTypeError
+from ...models import DocumentStatus, DocumentType
 from ...services import get_ingestion_service
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
@@ -247,3 +251,71 @@ async def delete_document(document_id: str) -> dict:
         raise HTTPException(status_code=404, detail=f"Document not found: {document_id}")
 
     return {"status": "deleted", "document_id": document_id}
+
+
+@router.post("/{document_id}/retry", response_model=DocumentResponse)
+async def retry_document(document_id: str) -> DocumentResponse:
+    """Retry processing a failed document.
+
+    For file uploads: re-reads the saved file from data/uploads/.
+    For URL documents: re-fetches from the stored URL.
+
+    Args:
+        document_id: ID of the failed document to retry
+
+    Returns:
+        Document with updated status (PENDING)
+    """
+    service = get_ingestion_service()
+    document = service.get_document(document_id)
+
+    if document is None:
+        raise HTTPException(status_code=404, detail=f"Document not found: {document_id}")
+
+    if document.status != DocumentStatus.FAILED:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Can only retry failed documents (current status: {document.status.value})",
+        )
+
+    # Reset document state
+    document.status = DocumentStatus.PENDING
+    document.error_message = None
+    document.chunk_count = 0
+    document.updated_at = datetime.now(UTC)
+    service._save_document_registry()
+
+    if document.document_type == DocumentType.URL:
+        # URL document: re-fetch from stored URL
+        url = (document.metadata.custom_metadata or {}).get("url")
+        if not url:
+            raise HTTPException(status_code=400, detail="URL not found in document metadata")
+        asyncio.create_task(service.process_url_background(document.document_id, url))
+    else:
+        # File document: read from uploads directory
+        settings = get_settings()
+        upload_path = settings.uploads_dir / f"{document_id}{Path(document.filename).suffix}"
+
+        if not upload_path.exists():
+            document.status = DocumentStatus.FAILED
+            document.error_message = "Original file not found. Please delete and re-upload."
+            service._save_document_registry()
+            raise HTTPException(
+                status_code=400,
+                detail="Original file not found. Please delete and re-upload the document.",
+            )
+
+        file_content = upload_path.read_bytes()
+        asyncio.create_task(service.process_document_background(document.document_id, file_content))
+
+    return DocumentResponse(
+        document_id=document.document_id,
+        filename=document.filename,
+        document_type=document.document_type.value,
+        status=document.status.value,
+        metadata=document.metadata.to_dict(),
+        chunk_count=document.chunk_count,
+        created_at=document.created_at.isoformat(),
+        updated_at=document.updated_at.isoformat(),
+        error_message=document.error_message,
+    )

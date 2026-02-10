@@ -30,6 +30,8 @@ import {
   useConversation,
   useDeleteConversation,
   useUploadFromUrl,
+  useRetryDocument,
+  useUpdateConversationTitle,
 } from './hooks';
 import { apiClient } from './api/client';
 import type { GeneratedSection, Document, RetrievalMetadata, ChatMessage, CoverageDescriptor, ContextUsed } from './types';
@@ -103,6 +105,8 @@ function App() {
   const { data: documentsData, isLoading: isLoadingDocuments } = useDocuments();
   const { uploadedDocumentId, clearUploadedDocumentId, ...uploadMutation } = useUploadDocument();
   const deleteMutation = useDeleteDocument();
+  const retryMutation = useRetryDocument();
+  const updateTitleMutation = useUpdateConversationTitle();
   const { uploadedDocumentId: urlUploadedDocId, clearUploadedDocumentId: clearUrlUploadedDocId, ...urlUploadMutation } = useUploadFromUrl();
 
   // Poll for document processing completion (file upload or URL)
@@ -248,6 +252,31 @@ function App() {
       }
     },
     [deleteMutation, addToast]
+  );
+
+  const handleRetryDocument = useCallback(
+    async (documentId: string) => {
+      try {
+        await retryMutation.mutateAsync(documentId);
+        addToast('Retrying document...', 'info');
+      } catch (error) {
+        console.error('Retry failed:', error);
+        addToast('Failed to retry document.', 'error');
+      }
+    },
+    [retryMutation, addToast]
+  );
+
+  const handleUpdateConversationTitle = useCallback(
+    async (conversationId: string, title: string) => {
+      try {
+        await updateTitleMutation.mutateAsync({ conversationId, title });
+      } catch (error) {
+        console.error('Failed to update title:', error);
+        addToast('Failed to update conversation title.', 'error');
+      }
+    },
+    [updateTitleMutation, addToast]
   );
 
   // Handle document selection toggle
@@ -750,8 +779,10 @@ function App() {
                     isSelected={selectedDocumentIds.has(doc.document_id)}
                     onToggleSelect={() => handleToggleDocumentSelection(doc.document_id)}
                     onDelete={() => handleDeleteDocument(doc.document_id)}
+                    onRetry={() => handleRetryDocument(doc.document_id)}
                     onPreview={() => setPreviewDocumentId(doc.document_id)}
                     isDeleting={deleteMutation.isPending}
+                    isRetrying={retryMutation.isPending}
                   />
                 ))
               )}
@@ -798,6 +829,7 @@ function App() {
                 currentConversationId={conversationId}
                 onSelect={handleSelectConversation}
                 onDelete={handleDeleteConversation}
+                onUpdateTitle={handleUpdateConversationTitle}
                 onNewChat={handleNewChat}
                 isLoading={isLoadingConversations}
               />
@@ -973,12 +1005,15 @@ interface DocumentCardProps {
   isSelected: boolean;
   onToggleSelect: () => void;
   onDelete: () => void;
+  onRetry: () => void;
   onPreview: () => void;
   isDeleting: boolean;
+  isRetrying: boolean;
 }
 
-function DocumentCard({ document, isSelected, onToggleSelect, onDelete, onPreview, isDeleting }: DocumentCardProps) {
+function DocumentCard({ document, isSelected, onToggleSelect, onDelete, onRetry, onPreview, isDeleting, isRetrying }: DocumentCardProps) {
   const isReady = document.status === 'ready';
+  const isFailed = document.status === 'failed';
 
   return (
     <article className={`document-card ${isSelected ? 'document-card--selected' : ''}`}>
@@ -1000,10 +1035,27 @@ function DocumentCard({ document, isSelected, onToggleSelect, onDelete, onPrevie
         <span
           className={`document-card__status document-card__status--${document.status}`}
         >
+          {(document.status === 'processing' || document.status === 'pending') && (
+            <span className="document-card__status-spinner" />
+          )}
           {document.status}
         </span>
+        {document.status === 'failed' && document.error_message && (
+          <p className="document-card__error">{document.error_message}</p>
+        )}
       </div>
       <div className="document-card__actions">
+        {isFailed && (
+          <button
+            type="button"
+            className="document-card__retry"
+            onClick={onRetry}
+            disabled={isRetrying}
+            aria-label={`Retry ${document.metadata.title}`}
+          >
+            {isRetrying ? 'Retrying...' : 'Retry'}
+          </button>
+        )}
         <button
           type="button"
           className="document-card__preview"

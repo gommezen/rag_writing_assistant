@@ -482,6 +482,34 @@
   }
 }
 
+.document-card__status-spinner {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 4px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.document-card__error {
+  margin: var(--spacing-xs) 0 0 0;
+  padding: var(--spacing-xs);
+  font-size: var(--font-size-xs);
+  color: var(--color-error, #dc2626);
+  background: rgba(220, 38, 38, 0.05);
+  border-left: 2px solid var(--color-error, #dc2626);
+  border-radius: var(--radius-sm);
+  line-height: 1.4;
+  word-break: break-word;
+}
+
 .document-card__actions {
   display: flex;
   flex-direction: column;
@@ -529,6 +557,28 @@
 }
 
 .document-card__delete:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.document-card__retry {
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  color: white;
+  background: var(--color-primary);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 2px 8px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.document-card__retry:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.document-card__retry:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }

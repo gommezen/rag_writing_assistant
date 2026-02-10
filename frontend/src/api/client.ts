@@ -86,6 +86,12 @@ class ApiClient {
     });
   }
 
+  async retryDocument(documentId: string): Promise<Document> {
+    return this.request(`/documents/${documentId}/retry`, {
+      method: 'POST',
+    });
+  }
+
   async uploadFromUrl(params: UploadFromUrlParams): Promise<Document> {
     return this.request('/documents/from-url', {
       method: 'POST',
