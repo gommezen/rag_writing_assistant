@@ -1,7 +1,5 @@
 """Tests for FAISS vector store."""
 
-import pytest
-from pathlib import Path
 from unittest.mock import patch
 
 from app.models import DocumentChunk
@@ -11,11 +9,11 @@ from app.rag.vectorstore import VectorStore
 class TestVectorStoreBasics:
     """Tests for basic vector store operations."""
 
-    def test_add_chunks_creates_index(
-        self, mock_settings, mock_embedding_service, sample_chunks
-    ):
+    def test_add_chunks_creates_index(self, mock_settings, mock_embedding_service, sample_chunks):
         """Adding chunks should create a FAISS index."""
-        with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+        with patch(
+            "app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service
+        ):
             with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
                 store = VectorStore(store_path=mock_settings.vectors_dir)
 
@@ -27,11 +25,11 @@ class TestVectorStoreBasics:
                 assert store.index is not None
                 assert len(store.chunks) == len(sample_chunks)
 
-    def test_add_empty_chunks_does_nothing(
-        self, mock_settings, mock_embedding_service
-    ):
+    def test_add_empty_chunks_does_nothing(self, mock_settings, mock_embedding_service):
         """Adding an empty list should not change the store."""
-        with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+        with patch(
+            "app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service
+        ):
             with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
                 store = VectorStore(store_path=mock_settings.vectors_dir)
 
@@ -40,9 +38,7 @@ class TestVectorStoreBasics:
                 assert store.index is None
                 assert len(store.chunks) == 0
 
-    def test_add_chunks_with_metadata(
-        self, mock_settings, mock_embedding_service
-    ):
+    def test_add_chunks_with_metadata(self, mock_settings, mock_embedding_service):
         """Chunks should preserve their metadata after adding."""
         chunks = [
             DocumentChunk(
@@ -56,7 +52,9 @@ class TestVectorStoreBasics:
             )
         ]
 
-        with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+        with patch(
+            "app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service
+        ):
             with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
                 store = VectorStore(store_path=mock_settings.vectors_dir)
                 store.add_chunks(chunks)
@@ -72,7 +70,9 @@ class TestVectorStoreSearch:
         self, mock_settings, mock_embedding_service, sample_chunks
     ):
         """Search should return chunks similar to the query."""
-        with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+        with patch(
+            "app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service
+        ):
             with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
                 store = VectorStore(store_path=mock_settings.vectors_dir)
                 store.add_chunks(sample_chunks)
@@ -88,11 +88,11 @@ class TestVectorStoreSearch:
                 assert all(isinstance(r[0], DocumentChunk) for r in results)
                 assert all(isinstance(r[1], float) for r in results)
 
-    def test_search_empty_store_returns_empty(
-        self, mock_settings, mock_embedding_service
-    ):
+    def test_search_empty_store_returns_empty(self, mock_settings, mock_embedding_service):
         """Searching an empty store should return empty list."""
-        with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+        with patch(
+            "app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service
+        ):
             with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
                 store = VectorStore(store_path=mock_settings.vectors_dir)
 
@@ -106,7 +106,9 @@ class TestVectorStoreSearch:
         """Search should return at most top_k results."""
         chunks = sample_chunks_factory(count=10)
 
-        with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+        with patch(
+            "app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service
+        ):
             with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
                 store = VectorStore(store_path=mock_settings.vectors_dir)
                 store.add_chunks(chunks)
@@ -123,7 +125,9 @@ class TestVectorStoreSearch:
         self, mock_settings, mock_embedding_service, sample_chunks
     ):
         """Search should filter results below the threshold."""
-        with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+        with patch(
+            "app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service
+        ):
             with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
                 store = VectorStore(store_path=mock_settings.vectors_dir)
                 store.add_chunks(sample_chunks)
@@ -138,9 +142,7 @@ class TestVectorStoreSearch:
                 # Results should be filtered by threshold
                 assert all(r[1] >= 0.99 for r in results)
 
-    def test_search_with_document_filter(
-        self, mock_settings, mock_embedding_service
-    ):
+    def test_search_with_document_filter(self, mock_settings, mock_embedding_service):
         """Search should filter by document IDs when specified."""
         chunks = [
             DocumentChunk(
@@ -164,7 +166,9 @@ class TestVectorStoreSearch:
             for i in range(3)
         ]
 
-        with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+        with patch(
+            "app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service
+        ):
             with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
                 store = VectorStore(store_path=mock_settings.vectors_dir)
                 store.add_chunks(chunks)
@@ -183,7 +187,9 @@ class TestVectorStoreSearch:
         self, mock_settings, mock_embedding_service, sample_chunks
     ):
         """Search results should be sorted by relevance score (descending)."""
-        with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+        with patch(
+            "app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service
+        ):
             with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
                 store = VectorStore(store_path=mock_settings.vectors_dir)
                 store.add_chunks(sample_chunks)
@@ -210,7 +216,9 @@ class TestVectorStoreDelete:
         doc1_chunks = sample_chunks_factory(document_id="doc-001", count=3)
         doc2_chunks = sample_chunks_factory(document_id="doc-002", count=3)
 
-        with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+        with patch(
+            "app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service
+        ):
             with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
                 store = VectorStore(store_path=mock_settings.vectors_dir)
                 store.add_chunks(doc1_chunks + doc2_chunks)
@@ -227,7 +235,9 @@ class TestVectorStoreDelete:
         self, mock_settings, mock_embedding_service, sample_chunks
     ):
         """Deleting a nonexistent document should return 0."""
-        with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+        with patch(
+            "app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service
+        ):
             with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
                 store = VectorStore(store_path=mock_settings.vectors_dir)
                 store.add_chunks(sample_chunks)
@@ -242,7 +252,9 @@ class TestVectorStoreDelete:
     ):
         """Deleting the only document should clear the store."""
         # All sample chunks have the same document_id
-        with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+        with patch(
+            "app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service
+        ):
             with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
                 store = VectorStore(store_path=mock_settings.vectors_dir)
                 store.add_chunks(sample_chunks)
@@ -257,11 +269,11 @@ class TestVectorStoreDelete:
 class TestVectorStorePersistence:
     """Tests for vector store persistence."""
 
-    def test_save_and_load(
-        self, mock_settings, mock_embedding_service, sample_chunks
-    ):
+    def test_save_and_load(self, mock_settings, mock_embedding_service, sample_chunks):
         """Vector store should persist and reload correctly."""
-        with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+        with patch(
+            "app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service
+        ):
             with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
                 # Create and populate store
                 store1 = VectorStore(store_path=mock_settings.vectors_dir)
@@ -275,9 +287,7 @@ class TestVectorStorePersistence:
                 assert len(store2.chunks) == chunk_count
                 assert store2.index is not None
 
-    def test_persistence_preserves_chunk_data(
-        self, mock_settings, mock_embedding_service
-    ):
+    def test_persistence_preserves_chunk_data(self, mock_settings, mock_embedding_service):
         """Persisted chunks should preserve all their data."""
         original_chunk = DocumentChunk(
             chunk_id="test-chunk-001",
@@ -291,7 +301,9 @@ class TestVectorStorePersistence:
             metadata={"title": "Test", "author": "Tester"},
         )
 
-        with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+        with patch(
+            "app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service
+        ):
             with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
                 store1 = VectorStore(store_path=mock_settings.vectors_dir)
                 store1.add_chunks([original_chunk])
@@ -309,11 +321,11 @@ class TestVectorStorePersistence:
 class TestVectorStoreStats:
     """Tests for vector store statistics."""
 
-    def test_get_stats_empty_store(
-        self, mock_settings, mock_embedding_service
-    ):
+    def test_get_stats_empty_store(self, mock_settings, mock_embedding_service):
         """Stats for empty store should show zeros."""
-        with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+        with patch(
+            "app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service
+        ):
             with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
                 store = VectorStore(store_path=mock_settings.vectors_dir)
 
@@ -330,7 +342,9 @@ class TestVectorStoreStats:
         doc1_chunks = sample_chunks_factory(document_id="doc-001", count=3)
         doc2_chunks = sample_chunks_factory(document_id="doc-002", count=5)
 
-        with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+        with patch(
+            "app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service
+        ):
             with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
                 store = VectorStore(store_path=mock_settings.vectors_dir)
                 store.add_chunks(doc1_chunks + doc2_chunks)

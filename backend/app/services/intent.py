@@ -37,6 +37,7 @@ FOCUSED_SUMMARY_PATTERNS = [
 @dataclass
 class IntentPattern:
     """Pattern for intent matching."""
+
     patterns: list[str]
     intent: QueryIntent
     retrieval_type: RetrievalType
@@ -117,9 +118,7 @@ class IntentService:
             (WRITING_PATTERNS, self._compile_patterns(WRITING_PATTERNS)),
         ]
         # Compile focused summary patterns
-        self._focused_patterns = [
-            re.compile(p, re.IGNORECASE) for p in FOCUSED_SUMMARY_PATTERNS
-        ]
+        self._focused_patterns = [re.compile(p, re.IGNORECASE) for p in FOCUSED_SUMMARY_PATTERNS]
 
     def _compile_patterns(self, pattern_group: IntentPattern) -> list[re.Pattern]:
         """Compile regex patterns for faster matching."""

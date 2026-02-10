@@ -121,7 +121,9 @@ class DocumentChunker:
                 # Start new chunk with overlap
                 overlap_text = self._get_overlap_text(current_chunk_text)
                 current_chunk_text = overlap_text + paragraph if overlap_text else paragraph
-                current_start_char = char_position - len(overlap_text) if overlap_text else char_position
+                current_start_char = (
+                    char_position - len(overlap_text) if overlap_text else char_position
+                )
             else:
                 # Add paragraph to current chunk
                 if current_chunk_text:
@@ -180,7 +182,7 @@ class DocumentChunker:
         space_idx = text.find(" ", overlap_start)
 
         if space_idx != -1 and space_idx < len(text):
-            return text[space_idx + 1:]
+            return text[space_idx + 1 :]
 
         return text[overlap_start:]
 

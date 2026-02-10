@@ -23,6 +23,7 @@ from .generation import (
 
 class ChatRole(str, Enum):
     """Role of a message in the conversation."""
+
     USER = "user"
     ASSISTANT = "assistant"
 
@@ -37,6 +38,7 @@ class ChatMessage:
     For user messages: content is the user's input
     For assistant messages: content is the response, with optional sections
     """
+
     message_id: str
     role: ChatRole
     content: str
@@ -60,6 +62,7 @@ class ChatMessage:
     def from_dict(cls, data: dict) -> "ChatMessage":
         """Create ChatMessage from dictionary (for deserialization)."""
         from datetime import datetime
+
         sections = None
         if data.get("sections"):
             sections = [GeneratedSection.from_dict(s) for s in data["sections"]]
@@ -80,6 +83,7 @@ class Conversation:
     Conversations are scoped to specific documents (or all documents if None).
     Cumulative coverage tracks what has been retrieved across all turns.
     """
+
     conversation_id: str
     messages: list[ChatMessage] = field(default_factory=list)
     document_ids: list[str] | None = None  # None = all documents
@@ -92,7 +96,9 @@ class Conversation:
             "conversation_id": self.conversation_id,
             "messages": [m.to_dict() for m in self.messages],
             "document_ids": self.document_ids,
-            "cumulative_coverage": self.cumulative_coverage.to_dict() if self.cumulative_coverage else None,
+            "cumulative_coverage": self.cumulative_coverage.to_dict()
+            if self.cumulative_coverage
+            else None,
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),
         }
@@ -101,6 +107,7 @@ class Conversation:
     def from_dict(cls, data: dict) -> "Conversation":
         """Create Conversation from dictionary (for deserialization)."""
         from datetime import datetime
+
         cumulative_coverage = None
         if data.get("cumulative_coverage"):
             cumulative_coverage = CoverageDescriptor.from_dict(data["cumulative_coverage"])
@@ -120,6 +127,7 @@ class ConversationSummary:
 
     Used in the conversation index to avoid loading full conversation data.
     """
+
     conversation_id: str
     title: str  # First user message, truncated
     message_count: int
@@ -139,6 +147,7 @@ class ConversationSummary:
     def from_dict(cls, data: dict) -> "ConversationSummary":
         """Create ConversationSummary from dictionary."""
         from datetime import datetime
+
         return cls(
             conversation_id=data["conversation_id"],
             title=data["title"],
@@ -148,7 +157,9 @@ class ConversationSummary:
         )
 
     @classmethod
-    def from_conversation(cls, conversation: "Conversation", max_title_length: int = 50) -> "ConversationSummary":
+    def from_conversation(
+        cls, conversation: "Conversation", max_title_length: int = 50
+    ) -> "ConversationSummary":
         """Create summary from a full Conversation."""
         # Find first user message for title
         title = "New conversation"
@@ -172,6 +183,7 @@ class ConversationSummary:
 
 class ChatRequest(BaseModel):
     """Request to send a chat message."""
+
     conversation_id: str | None = Field(
         default=None,
         description="Conversation ID to continue. If None, starts a new conversation.",
@@ -202,6 +214,7 @@ class ChatRequest(BaseModel):
 
 class ChatMessageResponse(BaseModel):
     """API response model for a chat message."""
+
     message_id: str
     role: str
     content: str
@@ -216,13 +229,16 @@ class ChatMessageResponse(BaseModel):
             role=message.role.value,
             content=message.content,
             timestamp=message.timestamp.isoformat(),
-            sections=[GeneratedSectionResponse.from_dataclass(s) for s in message.sections] if message.sections else None,
+            sections=[GeneratedSectionResponse.from_dataclass(s) for s in message.sections]
+            if message.sections
+            else None,
             sources_used=[SourceReferenceResponse.from_dataclass(s) for s in message.sources_used],
         )
 
 
 class ContextUsedResponse(BaseModel):
     """Shows what context was sent to the LLM for transparency."""
+
     history_messages_count: int = Field(description="Number of prior messages included")
     history_truncated: bool = Field(description="Whether history was truncated due to length")
     sources_count: int = Field(description="Number of sources retrieved for this turn")
@@ -230,6 +246,7 @@ class ContextUsedResponse(BaseModel):
 
 class ChatResponse(BaseModel):
     """Response from a chat turn."""
+
     conversation_id: str
     message: ChatMessageResponse
     cumulative_coverage: CoverageDescriptorResponse | None = None
@@ -242,6 +259,7 @@ class ChatResponse(BaseModel):
 
 class ConversationResponse(BaseModel):
     """Full conversation with all messages."""
+
     conversation_id: str
     messages: list[ChatMessageResponse]
     document_ids: list[str] | None = None
@@ -255,7 +273,11 @@ class ConversationResponse(BaseModel):
             conversation_id=conversation.conversation_id,
             messages=[ChatMessageResponse.from_dataclass(m) for m in conversation.messages],
             document_ids=conversation.document_ids,
-            cumulative_coverage=CoverageDescriptorResponse.from_dataclass(conversation.cumulative_coverage) if conversation.cumulative_coverage else None,
+            cumulative_coverage=CoverageDescriptorResponse.from_dataclass(
+                conversation.cumulative_coverage
+            )
+            if conversation.cumulative_coverage
+            else None,
             created_at=conversation.created_at.isoformat(),
             updated_at=conversation.updated_at.isoformat(),
         )
@@ -265,6 +287,7 @@ class ConversationResponse(BaseModel):
 
 class ConversationSummaryResponse(BaseModel):
     """API response model for conversation summary (used in listings)."""
+
     conversation_id: str
     title: str
     message_count: int
@@ -290,6 +313,7 @@ class ConversationSummaryResponse(BaseModel):
 @dataclass
 class ChatResult:
     """Internal result from chat service."""
+
     conversation: Conversation
     message: ChatMessage
     context_used: ContextUsedResponse
@@ -301,7 +325,11 @@ class ChatResult:
         return ChatResponse(
             conversation_id=self.conversation.conversation_id,
             message=ChatMessageResponse.from_dataclass(self.message),
-            cumulative_coverage=CoverageDescriptorResponse.from_dataclass(self.conversation.cumulative_coverage) if self.conversation.cumulative_coverage else None,
+            cumulative_coverage=CoverageDescriptorResponse.from_dataclass(
+                self.conversation.cumulative_coverage
+            )
+            if self.conversation.cumulative_coverage
+            else None,
             context_used=self.context_used,
             generation_time_ms=self.generation_time_ms,
             model_used=self.model_used,

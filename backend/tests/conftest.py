@@ -5,16 +5,13 @@ and factory fixtures for common test data.
 """
 
 import hashlib
-import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, BinaryIO
-from unittest.mock import AsyncMock, MagicMock, patch
+from typing import BinaryIO
+from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from fastapi.testclient import TestClient
-
 from app.config import Settings
 from app.models import (
     ChunkingConfig,
@@ -28,7 +25,7 @@ from app.models import (
     RetrievalMetadata,
     SourceReference,
 )
-
+from fastapi.testclient import TestClient
 
 # ============================================================================
 # Mock Classes for External Services
@@ -200,6 +197,7 @@ def sample_document(sample_document_metadata: DocumentMetadata) -> Document:
 @pytest.fixture
 def sample_document_factory():
     """Factory for creating multiple documents with different properties."""
+
     def _create(
         document_id: str | None = None,
         filename: str = "test.pdf",
@@ -218,6 +216,7 @@ def sample_document_factory():
             created_at=datetime.now(UTC),
             updated_at=datetime.now(UTC),
         )
+
     return _create
 
 
@@ -262,6 +261,7 @@ def sample_chunks() -> list[DocumentChunk]:
 @pytest.fixture
 def sample_chunks_factory():
     """Factory for creating chunks with custom properties."""
+
     def _create(
         document_id: str = "doc-001",
         count: int = 5,
@@ -280,6 +280,7 @@ def sample_chunks_factory():
             )
             for i in range(count)
         ]
+
     return _create
 
 
@@ -318,6 +319,7 @@ def sample_sources() -> list[SourceReference]:
 @pytest.fixture
 def sample_sources_factory():
     """Factory for creating source references with custom properties."""
+
     def _create(
         count: int = 3,
         document_id: str = "doc-001",
@@ -333,6 +335,7 @@ def sample_sources_factory():
             )
             for i in range(count)
         ]
+
     return _create
 
 
@@ -391,14 +394,20 @@ def in_memory_vector_store(mock_settings: Settings, mock_embedding_service: Mock
 
 
 @pytest.fixture
-def mock_services(mock_settings: Settings, mock_embedding_service: MockOllamaEmbeddings, mock_llm: MockChatOllama):
+def mock_services(
+    mock_settings: Settings, mock_embedding_service: MockOllamaEmbeddings, mock_llm: MockChatOllama
+):
     """Patch all singleton services with mocks."""
     with patch("app.config.get_settings", return_value=mock_settings):
         with patch("app.rag.embedding.get_settings", return_value=mock_settings):
             with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                with patch(
+                    "app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service
+                ):
                     with patch("app.services.retrieval.get_settings", return_value=mock_settings):
-                        with patch("app.services.generation.get_settings", return_value=mock_settings):
+                        with patch(
+                            "app.services.generation.get_settings", return_value=mock_settings
+                        ):
                             yield {
                                 "settings": mock_settings,
                                 "embedding_service": mock_embedding_service,
@@ -415,13 +424,13 @@ def mock_services(mock_settings: Settings, mock_embedding_service: MockOllamaEmb
 def test_client(mock_services):
     """Create a FastAPI test client with mocked services."""
     # Reset singleton instances before creating client
-    import app.services.ingestion as ingestion_module
-    import app.services.retrieval as retrieval_module
-    import app.services.generation as generation_module
-    import app.services.intent as intent_module
-    import app.services.diverse_retrieval as diverse_retrieval_module
-    import app.rag.vectorstore as vectorstore_module
     import app.rag.embedding as embedding_module
+    import app.rag.vectorstore as vectorstore_module
+    import app.services.diverse_retrieval as diverse_retrieval_module
+    import app.services.generation as generation_module
+    import app.services.ingestion as ingestion_module
+    import app.services.intent as intent_module
+    import app.services.retrieval as retrieval_module
 
     # Clear singletons
     ingestion_module._ingestion_service = None
@@ -456,6 +465,7 @@ def test_client(mock_services):
 def sample_txt_file() -> tuple[BinaryIO, str]:
     """Create a sample TXT file for testing."""
     import io
+
     content = b"This is a test document.\n\nIt has multiple paragraphs.\n\nFor testing purposes."
     return io.BytesIO(content), "test_document.txt"
 
@@ -507,10 +517,12 @@ startxref
 @pytest.fixture
 def create_temp_txt_file(tmp_path: Path):
     """Factory to create temporary text files with custom content."""
+
     def _create(content: str, filename: str = "test.txt") -> Path:
         file_path = tmp_path / filename
         file_path.write_text(content)
         return file_path
+
     return _create
 
 
@@ -533,6 +545,7 @@ def chunking_config() -> ChunkingConfig:
 @pytest.fixture
 def assert_rag_metadata():
     """Helper to verify RAG metadata is present and valid."""
+
     def _assert(response_data: dict):
         # Verify sources array is never null
         if "sections" in response_data:

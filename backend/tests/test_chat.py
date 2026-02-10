@@ -7,14 +7,10 @@ Tests multi-turn conversation functionality including:
 - API endpoint behavior
 """
 
-import io
-import pytest
 from datetime import UTC, datetime
-from unittest.mock import patch, AsyncMock, MagicMock
-from uuid import uuid4
+from unittest.mock import patch
 
-from fastapi.testclient import TestClient
-
+import pytest
 from app.models import (
     ChatMessage,
     ChatRequest,
@@ -22,9 +18,8 @@ from app.models import (
     Conversation,
     CoverageDescriptor,
     RetrievalType,
-    SourceReference,
 )
-
+from fastapi.testclient import TestClient
 
 # ============================================================================
 # ChatMessage Model Tests
@@ -228,13 +223,13 @@ class TestChatServiceUnit:
 
     def _reset_singletons(self):
         """Reset all singleton instances."""
-        import app.services.ingestion as ingestion_module
-        import app.services.retrieval as retrieval_module
-        import app.services.generation as generation_module
-        import app.services.intent as intent_module
-        import app.services.chat as chat_module
-        import app.rag.vectorstore as vectorstore_module
         import app.rag.embedding as embedding_module
+        import app.rag.vectorstore as vectorstore_module
+        import app.services.chat as chat_module
+        import app.services.generation as generation_module
+        import app.services.ingestion as ingestion_module
+        import app.services.intent as intent_module
+        import app.services.retrieval as retrieval_module
 
         ingestion_module._ingestion_service = None
         retrieval_module._retrieval_service = None
@@ -244,9 +239,7 @@ class TestChatServiceUnit:
         vectorstore_module._vector_store = None
         embedding_module._embedding_service = None
 
-    def test_get_or_create_conversation_new(
-        self, mock_settings, mock_embedding_service
-    ):
+    def test_get_or_create_conversation_new(self, mock_settings, mock_embedding_service):
         """Should create a new conversation when ID is None."""
         self._reset_singletons()
 
@@ -255,8 +248,13 @@ class TestChatServiceUnit:
                 with patch("app.services.retrieval.get_settings", return_value=mock_settings):
                     with patch("app.services.generation.get_settings", return_value=mock_settings):
                         with patch("app.rag.chunking.get_settings", return_value=mock_settings):
-                            with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                                with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                            with patch(
+                                "app.rag.vectorstore.get_settings", return_value=mock_settings
+                            ):
+                                with patch(
+                                    "app.rag.vectorstore.get_embedding_service",
+                                    return_value=mock_embedding_service,
+                                ):
                                     from app.services.chat import ChatService
 
                                     service = ChatService()
@@ -273,9 +271,7 @@ class TestChatServiceUnit:
 
         self._reset_singletons()
 
-    def test_get_or_create_conversation_existing(
-        self, mock_settings, mock_embedding_service
-    ):
+    def test_get_or_create_conversation_existing(self, mock_settings, mock_embedding_service):
         """Should return existing conversation when ID matches."""
         self._reset_singletons()
 
@@ -284,8 +280,13 @@ class TestChatServiceUnit:
                 with patch("app.services.retrieval.get_settings", return_value=mock_settings):
                     with patch("app.services.generation.get_settings", return_value=mock_settings):
                         with patch("app.rag.chunking.get_settings", return_value=mock_settings):
-                            with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                                with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                            with patch(
+                                "app.rag.vectorstore.get_settings", return_value=mock_settings
+                            ):
+                                with patch(
+                                    "app.rag.vectorstore.get_embedding_service",
+                                    return_value=mock_embedding_service,
+                                ):
                                     from app.services.chat import ChatService
 
                                     service = ChatService()
@@ -307,9 +308,7 @@ class TestChatServiceUnit:
 
         self._reset_singletons()
 
-    def test_create_user_message(
-        self, mock_settings, mock_embedding_service
-    ):
+    def test_create_user_message(self, mock_settings, mock_embedding_service):
         """Should create a user message with correct fields."""
         self._reset_singletons()
 
@@ -318,8 +317,13 @@ class TestChatServiceUnit:
                 with patch("app.services.retrieval.get_settings", return_value=mock_settings):
                     with patch("app.services.generation.get_settings", return_value=mock_settings):
                         with patch("app.rag.chunking.get_settings", return_value=mock_settings):
-                            with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                                with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                            with patch(
+                                "app.rag.vectorstore.get_settings", return_value=mock_settings
+                            ):
+                                with patch(
+                                    "app.rag.vectorstore.get_embedding_service",
+                                    return_value=mock_embedding_service,
+                                ):
                                     from app.services.chat import ChatService
 
                                     service = ChatService()
@@ -332,9 +336,7 @@ class TestChatServiceUnit:
 
         self._reset_singletons()
 
-    def test_create_assistant_message(
-        self, mock_settings, mock_embedding_service, sample_sources
-    ):
+    def test_create_assistant_message(self, mock_settings, mock_embedding_service, sample_sources):
         """Should create an assistant message with sources."""
         self._reset_singletons()
 
@@ -343,8 +345,13 @@ class TestChatServiceUnit:
                 with patch("app.services.retrieval.get_settings", return_value=mock_settings):
                     with patch("app.services.generation.get_settings", return_value=mock_settings):
                         with patch("app.rag.chunking.get_settings", return_value=mock_settings):
-                            with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                                with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                            with patch(
+                                "app.rag.vectorstore.get_settings", return_value=mock_settings
+                            ):
+                                with patch(
+                                    "app.rag.vectorstore.get_embedding_service",
+                                    return_value=mock_embedding_service,
+                                ):
                                     from app.services.chat import ChatService
 
                                     service = ChatService()
@@ -359,9 +366,7 @@ class TestChatServiceUnit:
 
         self._reset_singletons()
 
-    def test_get_conversation_history_empty(
-        self, mock_settings, mock_embedding_service
-    ):
+    def test_get_conversation_history_empty(self, mock_settings, mock_embedding_service):
         """Should return empty history for new conversation."""
         self._reset_singletons()
 
@@ -370,8 +375,13 @@ class TestChatServiceUnit:
                 with patch("app.services.retrieval.get_settings", return_value=mock_settings):
                     with patch("app.services.generation.get_settings", return_value=mock_settings):
                         with patch("app.rag.chunking.get_settings", return_value=mock_settings):
-                            with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                                with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                            with patch(
+                                "app.rag.vectorstore.get_settings", return_value=mock_settings
+                            ):
+                                with patch(
+                                    "app.rag.vectorstore.get_embedding_service",
+                                    return_value=mock_embedding_service,
+                                ):
                                     from app.services.chat import ChatService
 
                                     service = ChatService()
@@ -389,9 +399,7 @@ class TestChatServiceUnit:
 
         self._reset_singletons()
 
-    def test_get_conversation_history_with_messages(
-        self, mock_settings, mock_embedding_service
-    ):
+    def test_get_conversation_history_with_messages(self, mock_settings, mock_embedding_service):
         """Should return history in order."""
         self._reset_singletons()
 
@@ -400,17 +408,30 @@ class TestChatServiceUnit:
                 with patch("app.services.retrieval.get_settings", return_value=mock_settings):
                     with patch("app.services.generation.get_settings", return_value=mock_settings):
                         with patch("app.rag.chunking.get_settings", return_value=mock_settings):
-                            with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                                with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                            with patch(
+                                "app.rag.vectorstore.get_settings", return_value=mock_settings
+                            ):
+                                with patch(
+                                    "app.rag.vectorstore.get_embedding_service",
+                                    return_value=mock_embedding_service,
+                                ):
                                     from app.services.chat import ChatService
 
                                     service = ChatService()
 
                                     messages = [
-                                        ChatMessage(message_id="1", role=ChatRole.USER, content="Q1"),
-                                        ChatMessage(message_id="2", role=ChatRole.ASSISTANT, content="A1"),
-                                        ChatMessage(message_id="3", role=ChatRole.USER, content="Q2"),
-                                        ChatMessage(message_id="4", role=ChatRole.ASSISTANT, content="A2"),
+                                        ChatMessage(
+                                            message_id="1", role=ChatRole.USER, content="Q1"
+                                        ),
+                                        ChatMessage(
+                                            message_id="2", role=ChatRole.ASSISTANT, content="A1"
+                                        ),
+                                        ChatMessage(
+                                            message_id="3", role=ChatRole.USER, content="Q2"
+                                        ),
+                                        ChatMessage(
+                                            message_id="4", role=ChatRole.ASSISTANT, content="A2"
+                                        ),
                                     ]
                                     conversation = Conversation(
                                         conversation_id="test",
@@ -428,9 +449,7 @@ class TestChatServiceUnit:
 
         self._reset_singletons()
 
-    def test_get_conversation_history_truncation(
-        self, mock_settings, mock_embedding_service
-    ):
+    def test_get_conversation_history_truncation(self, mock_settings, mock_embedding_service):
         """Should truncate history when exceeding max_turns."""
         self._reset_singletons()
 
@@ -439,8 +458,13 @@ class TestChatServiceUnit:
                 with patch("app.services.retrieval.get_settings", return_value=mock_settings):
                     with patch("app.services.generation.get_settings", return_value=mock_settings):
                         with patch("app.rag.chunking.get_settings", return_value=mock_settings):
-                            with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                                with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                            with patch(
+                                "app.rag.vectorstore.get_settings", return_value=mock_settings
+                            ):
+                                with patch(
+                                    "app.rag.vectorstore.get_embedding_service",
+                                    return_value=mock_embedding_service,
+                                ):
                                     from app.services.chat import ChatService
 
                                     service = ChatService()
@@ -488,13 +512,13 @@ class TestChatAPIEndpoints:
 
     def _reset_singletons(self):
         """Reset all singleton instances."""
-        import app.services.ingestion as ingestion_module
-        import app.services.retrieval as retrieval_module
-        import app.services.generation as generation_module
-        import app.services.intent as intent_module
-        import app.services.chat as chat_module
-        import app.rag.vectorstore as vectorstore_module
         import app.rag.embedding as embedding_module
+        import app.rag.vectorstore as vectorstore_module
+        import app.services.chat as chat_module
+        import app.services.generation as generation_module
+        import app.services.ingestion as ingestion_module
+        import app.services.intent as intent_module
+        import app.services.retrieval as retrieval_module
 
         ingestion_module._ingestion_service = None
         retrieval_module._retrieval_service = None
@@ -504,9 +528,7 @@ class TestChatAPIEndpoints:
         vectorstore_module._vector_store = None
         embedding_module._embedding_service = None
 
-    def test_get_conversation_not_found(
-        self, mock_settings, mock_embedding_service
-    ):
+    def test_get_conversation_not_found(self, mock_settings, mock_embedding_service):
         """Should return 404 for non-existent conversation."""
         self._reset_singletons()
 
@@ -515,8 +537,12 @@ class TestChatAPIEndpoints:
                 with patch("app.services.chat.get_settings", return_value=mock_settings):
                     with patch("app.rag.chunking.get_settings", return_value=mock_settings):
                         with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                            with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                            with patch(
+                                "app.rag.vectorstore.get_embedding_service",
+                                return_value=mock_embedding_service,
+                            ):
                                 from app.main import app
+
                                 client = TestClient(app)
 
                                 response = client.get("/api/chat/nonexistent-id")
@@ -526,9 +552,7 @@ class TestChatAPIEndpoints:
 
         self._reset_singletons()
 
-    def test_chat_empty_message_rejected(
-        self, mock_settings, mock_embedding_service
-    ):
+    def test_chat_empty_message_rejected(self, mock_settings, mock_embedding_service):
         """Should reject empty chat messages."""
         self._reset_singletons()
 
@@ -536,14 +560,15 @@ class TestChatAPIEndpoints:
             with patch("app.services.ingestion.get_settings", return_value=mock_settings):
                 with patch("app.rag.chunking.get_settings", return_value=mock_settings):
                     with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                        with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                        with patch(
+                            "app.rag.vectorstore.get_embedding_service",
+                            return_value=mock_embedding_service,
+                        ):
                             from app.main import app
+
                             client = TestClient(app)
 
-                            response = client.post(
-                                "/api/chat",
-                                json={"message": ""}
-                            )
+                            response = client.post("/api/chat", json={"message": ""})
 
                             assert response.status_code == 422
 
@@ -564,13 +589,13 @@ class TestChatServiceIntegration:
 
     def _reset_singletons(self):
         """Reset all singleton instances."""
-        import app.services.ingestion as ingestion_module
-        import app.services.retrieval as retrieval_module
-        import app.services.generation as generation_module
-        import app.services.intent as intent_module
-        import app.services.chat as chat_module
-        import app.rag.vectorstore as vectorstore_module
         import app.rag.embedding as embedding_module
+        import app.rag.vectorstore as vectorstore_module
+        import app.services.chat as chat_module
+        import app.services.generation as generation_module
+        import app.services.ingestion as ingestion_module
+        import app.services.intent as intent_module
+        import app.services.retrieval as retrieval_module
 
         ingestion_module._ingestion_service = None
         retrieval_module._retrieval_service = None
@@ -603,8 +628,13 @@ class TestChatServiceIntegration:
                     with patch("app.services.generation.get_settings", return_value=mock_settings):
                         with patch("app.services.chat.get_settings", return_value=mock_settings):
                             with patch("app.rag.chunking.get_settings", return_value=mock_settings):
-                                with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                                    with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                                with patch(
+                                    "app.rag.vectorstore.get_settings", return_value=mock_settings
+                                ):
+                                    with patch(
+                                        "app.rag.vectorstore.get_embedding_service",
+                                        return_value=mock_embedding_service,
+                                    ):
                                         from app.services.chat import ChatService
                                         from app.services.generation import GenerationService
 
@@ -642,8 +672,13 @@ class TestChatServiceIntegration:
                     with patch("app.services.generation.get_settings", return_value=mock_settings):
                         with patch("app.services.chat.get_settings", return_value=mock_settings):
                             with patch("app.rag.chunking.get_settings", return_value=mock_settings):
-                                with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                                    with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                                with patch(
+                                    "app.rag.vectorstore.get_settings", return_value=mock_settings
+                                ):
+                                    with patch(
+                                        "app.rag.vectorstore.get_embedding_service",
+                                        return_value=mock_embedding_service,
+                                    ):
                                         from app.services.chat import ChatService
                                         from app.services.generation import GenerationService
 
@@ -668,14 +703,14 @@ class TestChatServiceIntegration:
                                         )
 
                                         assert result2.conversation.conversation_id == conv_id
-                                        assert len(result2.conversation.messages) == 4  # 2 user + 2 assistant
+                                        assert (
+                                            len(result2.conversation.messages) == 4
+                                        )  # 2 user + 2 assistant
 
         self._reset_singletons()
 
     @pytest.mark.asyncio
-    async def test_chat_returns_context_used(
-        self, mock_settings, mock_embedding_service, mock_llm
-    ):
+    async def test_chat_returns_context_used(self, mock_settings, mock_embedding_service, mock_llm):
         """Chat should return context_used for transparency."""
         self._reset_singletons()
 
@@ -687,8 +722,13 @@ class TestChatServiceIntegration:
                     with patch("app.services.generation.get_settings", return_value=mock_settings):
                         with patch("app.services.chat.get_settings", return_value=mock_settings):
                             with patch("app.rag.chunking.get_settings", return_value=mock_settings):
-                                with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                                    with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                                with patch(
+                                    "app.rag.vectorstore.get_settings", return_value=mock_settings
+                                ):
+                                    with patch(
+                                        "app.rag.vectorstore.get_embedding_service",
+                                        return_value=mock_embedding_service,
+                                    ):
                                         from app.services.chat import ChatService
                                         from app.services.generation import GenerationService
 
@@ -704,9 +744,11 @@ class TestChatServiceIntegration:
                                         )
 
                                         assert result.context_used is not None
-                                        assert hasattr(result.context_used, 'history_messages_count')
-                                        assert hasattr(result.context_used, 'history_truncated')
-                                        assert hasattr(result.context_used, 'sources_count')
+                                        assert hasattr(
+                                            result.context_used, "history_messages_count"
+                                        )
+                                        assert hasattr(result.context_used, "history_truncated")
+                                        assert hasattr(result.context_used, "sources_count")
 
         self._reset_singletons()
 
@@ -725,8 +767,13 @@ class TestChatServiceIntegration:
                     with patch("app.services.generation.get_settings", return_value=mock_settings):
                         with patch("app.services.chat.get_settings", return_value=mock_settings):
                             with patch("app.rag.chunking.get_settings", return_value=mock_settings):
-                                with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                                    with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                                with patch(
+                                    "app.rag.vectorstore.get_settings", return_value=mock_settings
+                                ):
+                                    with patch(
+                                        "app.rag.vectorstore.get_embedding_service",
+                                        return_value=mock_embedding_service,
+                                    ):
                                         from app.services.chat import ChatService
                                         from app.services.generation import GenerationService
 
@@ -761,13 +808,13 @@ class TestCumulativeCoverage:
 
     def _reset_singletons(self):
         """Reset all singleton instances."""
-        import app.services.ingestion as ingestion_module
-        import app.services.retrieval as retrieval_module
-        import app.services.generation as generation_module
-        import app.services.intent as intent_module
-        import app.services.chat as chat_module
-        import app.rag.vectorstore as vectorstore_module
         import app.rag.embedding as embedding_module
+        import app.rag.vectorstore as vectorstore_module
+        import app.services.chat as chat_module
+        import app.services.generation as generation_module
+        import app.services.ingestion as ingestion_module
+        import app.services.intent as intent_module
+        import app.services.retrieval as retrieval_module
 
         ingestion_module._ingestion_service = None
         retrieval_module._retrieval_service = None
@@ -799,8 +846,13 @@ class TestCumulativeCoverage:
                     with patch("app.services.generation.get_settings", return_value=mock_settings):
                         with patch("app.services.chat.get_settings", return_value=mock_settings):
                             with patch("app.rag.chunking.get_settings", return_value=mock_settings):
-                                with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                                    with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                                with patch(
+                                    "app.rag.vectorstore.get_settings", return_value=mock_settings
+                                ):
+                                    with patch(
+                                        "app.rag.vectorstore.get_embedding_service",
+                                        return_value=mock_embedding_service,
+                                    ):
                                         from app.services.chat import ChatService
                                         from app.services.generation import GenerationService
 
@@ -831,7 +883,7 @@ class TestCumulativeCoverage:
                                         if result2.conversation.cumulative_coverage:
                                             coverage = result2.conversation.cumulative_coverage
                                             # Should have chunks_seen attribute
-                                            assert hasattr(coverage, 'chunks_seen')
+                                            assert hasattr(coverage, "chunks_seen")
 
         self._reset_singletons()
 
@@ -839,9 +891,7 @@ class TestCumulativeCoverage:
         """Coverage update should accumulate unique chunks."""
         from app.models import (
             Conversation,
-            CoverageDescriptor,
             RetrievalMetadata,
-            RetrievalType,
         )
         from app.services.chat import ChatService
 
@@ -885,9 +935,7 @@ class TestCumulativeCoverage:
         # Service doesn't need full initialization for this test
         # Just testing the coverage update logic
         chat_service = ChatService.__new__(ChatService)
-        chat_service._update_cumulative_coverage(
-            conversation, new_sources, retrieval_metadata
-        )
+        chat_service._update_cumulative_coverage(conversation, new_sources, retrieval_metadata)
 
         # Coverage should be updated
         assert conversation.cumulative_coverage is not None

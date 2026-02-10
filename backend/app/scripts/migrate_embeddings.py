@@ -275,9 +275,7 @@ def run_migration(
 
 def main():
     """Main entry point."""
-    parser = argparse.ArgumentParser(
-        description="Migrate embeddings to a new model"
-    )
+    parser = argparse.ArgumentParser(description="Migrate embeddings to a new model")
     parser.add_argument(
         "--vectors-dir",
         type=Path,

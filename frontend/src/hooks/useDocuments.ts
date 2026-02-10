@@ -5,7 +5,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../api/client';
-import type { UploadDocumentParams, Document } from '../types';
+import type { UploadDocumentParams, UploadFromUrlParams, Document } from '../types';
 
 const DOCUMENTS_KEY = ['documents'];
 
@@ -91,6 +91,31 @@ export function useUploadDocument() {
   });
 
   // Clear the uploaded document ID when polling completes
+  const clearUploadedDocumentId = useCallback(() => {
+    setUploadedDocumentId(null);
+  }, []);
+
+  return {
+    ...mutation,
+    uploadedDocumentId,
+    clearUploadedDocumentId,
+  };
+}
+
+export function useUploadFromUrl() {
+  const queryClient = useQueryClient();
+  const [uploadedDocumentId, setUploadedDocumentId] = useState<string | null>(null);
+
+  const mutation = useMutation({
+    mutationFn: (params: UploadFromUrlParams) => apiClient.uploadFromUrl(params),
+    onSuccess: (document: Document) => {
+      queryClient.invalidateQueries({ queryKey: DOCUMENTS_KEY });
+      if (document.status !== 'ready') {
+        setUploadedDocumentId(document.document_id);
+      }
+    },
+  });
+
   const clearUploadedDocumentId = useCallback(() => {
     setUploadedDocumentId(null);
   }, []);

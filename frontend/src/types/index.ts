@@ -24,6 +24,7 @@ export type {
   DocumentStatus,
   DocumentType,
   UploadDocumentParams,
+  UploadFromUrlParams,
 } from './document';
 
 export type {

@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 from uuid import uuid4
 
 from ..config import get_settings
-from ..core import get_logger, RetrievalError
+from ..core import get_logger
 from ..models import (
     ChatMessage,
     ChatResult,
@@ -18,14 +18,12 @@ from ..models import (
     Conversation,
     ConversationSummary,
     CoverageDescriptor,
-    DocumentCoverage,
     GeneratedSection,
-    QueryIntent,
     RetrievalMetadata,
     RetrievalType,
     SourceReference,
 )
-from ..rag import build_chat_prompt, sanitize_citations, extract_citations
+from ..rag import build_chat_prompt, sanitize_citations
 from .conversation_store import ConversationStore
 from .generation import get_generation_service
 from .intent import get_intent_service
@@ -227,8 +225,7 @@ class ChatService:
             new_total = retrieval_metadata.coverage.chunks_total
             # Keep the larger total to account for document selection changes
             conversation.cumulative_coverage.chunks_total = max(
-                conversation.cumulative_coverage.chunks_total,
-                new_total
+                conversation.cumulative_coverage.chunks_total, new_total
             )
 
         # Calculate percentage (cap at 100% in case of document selection changes)
@@ -265,7 +262,9 @@ class ChatService:
         if not all_chunk_ids:
             return "This is the start of the conversation. No prior sources have been retrieved."
 
-        return f"Across this conversation, you have seen {len(all_chunk_ids)} unique document chunks."
+        return (
+            f"Across this conversation, you have seen {len(all_chunk_ids)} unique document chunks."
+        )
 
     async def chat(
         self,

@@ -9,6 +9,7 @@ export {
   useDocumentPolling,
   useDocuments,
   useUploadDocument,
+  useUploadFromUrl,
 } from './useDocuments';
 
 export { useGenerateDraft, useRegenerateSection, useSuggestedQuestions } from './useGeneration';

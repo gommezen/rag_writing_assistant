@@ -1,10 +1,9 @@
 """Tests for document ingestion service."""
 
 import io
-import pytest
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import patch
 
+import pytest
 from app.core import DocumentProcessingError, UnsupportedDocumentTypeError
 from app.models import DocumentStatus, DocumentType
 from app.services.ingestion import IngestionService
@@ -22,7 +21,10 @@ class TestIngestionServiceBasics:
         with patch("app.services.ingestion.get_settings", return_value=mock_settings):
             with patch("app.rag.chunking.get_settings", return_value=mock_settings):
                 with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                    with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                    with patch(
+                        "app.rag.vectorstore.get_embedding_service",
+                        return_value=mock_embedding_service,
+                    ):
                         service = IngestionService()
 
                         document = await service.ingest_document(
@@ -46,11 +48,16 @@ class TestIngestionServiceBasics:
         with patch("app.services.ingestion.get_settings", return_value=mock_settings):
             with patch("app.rag.chunking.get_settings", return_value=mock_settings):
                 with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                    with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                    with patch(
+                        "app.rag.vectorstore.get_embedding_service",
+                        return_value=mock_embedding_service,
+                    ):
                         service = IngestionService()
 
                         # Use a mock that returns text from "PDF"
-                        with patch.object(service, "_parse_pdf", return_value="PDF content for testing"):
+                        with patch.object(
+                            service, "_parse_pdf", return_value="PDF content for testing"
+                        ):
                             file = io.BytesIO(pdf_content)
                             document = await service.ingest_document(
                                 file=file,
@@ -70,11 +77,16 @@ class TestIngestionServiceBasics:
         with patch("app.services.ingestion.get_settings", return_value=mock_settings):
             with patch("app.rag.chunking.get_settings", return_value=mock_settings):
                 with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                    with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                    with patch(
+                        "app.rag.vectorstore.get_embedding_service",
+                        return_value=mock_embedding_service,
+                    ):
                         service = IngestionService()
 
                         # Mock the DOCX parser since we don't have a real DOCX file
-                        with patch.object(service, "_parse_docx", return_value="DOCX content for testing"):
+                        with patch.object(
+                            service, "_parse_docx", return_value="DOCX content for testing"
+                        ):
                             file = io.BytesIO(b"fake docx content")
                             document = await service.ingest_document(
                                 file=file,
@@ -94,7 +106,10 @@ class TestIngestionServiceErrors:
         with patch("app.services.ingestion.get_settings", return_value=mock_settings):
             with patch("app.rag.chunking.get_settings", return_value=mock_settings):
                 with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                    with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                    with patch(
+                        "app.rag.vectorstore.get_embedding_service",
+                        return_value=mock_embedding_service,
+                    ):
                         service = IngestionService()
                         file = io.BytesIO(b"some content")
 
@@ -110,7 +125,10 @@ class TestIngestionServiceErrors:
         with patch("app.services.ingestion.get_settings", return_value=mock_settings):
             with patch("app.rag.chunking.get_settings", return_value=mock_settings):
                 with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                    with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                    with patch(
+                        "app.rag.vectorstore.get_embedding_service",
+                        return_value=mock_embedding_service,
+                    ):
                         service = IngestionService()
                         file = io.BytesIO(b"")
 
@@ -129,7 +147,10 @@ class TestIngestionServiceErrors:
         with patch("app.services.ingestion.get_settings", return_value=mock_settings):
             with patch("app.rag.chunking.get_settings", return_value=mock_settings):
                 with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                    with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                    with patch(
+                        "app.rag.vectorstore.get_embedding_service",
+                        return_value=mock_embedding_service,
+                    ):
                         service = IngestionService()
 
                         # Make _parse_pdf raise an exception
@@ -159,7 +180,10 @@ class TestIngestionServiceMetadata:
         with patch("app.services.ingestion.get_settings", return_value=mock_settings):
             with patch("app.rag.chunking.get_settings", return_value=mock_settings):
                 with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                    with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                    with patch(
+                        "app.rag.vectorstore.get_embedding_service",
+                        return_value=mock_embedding_service,
+                    ):
                         service = IngestionService()
 
                         document = await service.ingest_document(
@@ -185,7 +209,10 @@ class TestIngestionServiceMetadata:
         with patch("app.services.ingestion.get_settings", return_value=mock_settings):
             with patch("app.rag.chunking.get_settings", return_value=mock_settings):
                 with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                    with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                    with patch(
+                        "app.rag.vectorstore.get_embedding_service",
+                        return_value=mock_embedding_service,
+                    ):
                         service = IngestionService()
 
                         document = await service.ingest_document(
@@ -205,7 +232,10 @@ class TestIngestionServiceMetadata:
         with patch("app.services.ingestion.get_settings", return_value=mock_settings):
             with patch("app.rag.chunking.get_settings", return_value=mock_settings):
                 with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                    with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                    with patch(
+                        "app.rag.vectorstore.get_embedding_service",
+                        return_value=mock_embedding_service,
+                    ):
                         service = IngestionService()
 
                         document = await service.ingest_document(
@@ -228,7 +258,10 @@ class TestIngestionServiceDocumentManagement:
         with patch("app.services.ingestion.get_settings", return_value=mock_settings):
             with patch("app.rag.chunking.get_settings", return_value=mock_settings):
                 with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                    with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                    with patch(
+                        "app.rag.vectorstore.get_embedding_service",
+                        return_value=mock_embedding_service,
+                    ):
                         service = IngestionService()
 
                         document = await service.ingest_document(
@@ -246,7 +279,10 @@ class TestIngestionServiceDocumentManagement:
         with patch("app.services.ingestion.get_settings", return_value=mock_settings):
             with patch("app.rag.chunking.get_settings", return_value=mock_settings):
                 with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                    with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                    with patch(
+                        "app.rag.vectorstore.get_embedding_service",
+                        return_value=mock_embedding_service,
+                    ):
                         service = IngestionService()
 
                         result = service.get_document("nonexistent-id")
@@ -259,7 +295,10 @@ class TestIngestionServiceDocumentManagement:
         with patch("app.services.ingestion.get_settings", return_value=mock_settings):
             with patch("app.rag.chunking.get_settings", return_value=mock_settings):
                 with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                    with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                    with patch(
+                        "app.rag.vectorstore.get_embedding_service",
+                        return_value=mock_embedding_service,
+                    ):
                         service = IngestionService()
 
                         # Ingest multiple documents
@@ -283,7 +322,10 @@ class TestIngestionServiceDocumentManagement:
         with patch("app.services.ingestion.get_settings", return_value=mock_settings):
             with patch("app.rag.chunking.get_settings", return_value=mock_settings):
                 with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                    with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                    with patch(
+                        "app.rag.vectorstore.get_embedding_service",
+                        return_value=mock_embedding_service,
+                    ):
                         service = IngestionService()
 
                         document = await service.ingest_document(
@@ -300,17 +342,17 @@ class TestIngestionServiceDocumentManagement:
                         assert service.get_document(doc_id) is None
 
                         # Verify chunks are removed from vector store
-                        assert all(
-                            c.document_id != doc_id
-                            for c in service.vector_store.chunks
-                        )
+                        assert all(c.document_id != doc_id for c in service.vector_store.chunks)
 
     def test_delete_nonexistent_document(self, mock_settings, mock_embedding_service):
         """Should return False when deleting nonexistent document."""
         with patch("app.services.ingestion.get_settings", return_value=mock_settings):
             with patch("app.rag.chunking.get_settings", return_value=mock_settings):
                 with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                    with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                    with patch(
+                        "app.rag.vectorstore.get_embedding_service",
+                        return_value=mock_embedding_service,
+                    ):
                         service = IngestionService()
 
                         result = service.delete_document("nonexistent-id")
@@ -326,7 +368,10 @@ class TestIngestionServiceParsers:
         with patch("app.services.ingestion.get_settings", return_value=mock_settings):
             with patch("app.rag.chunking.get_settings", return_value=mock_settings):
                 with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                    with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                    with patch(
+                        "app.rag.vectorstore.get_embedding_service",
+                        return_value=mock_embedding_service,
+                    ):
                         service = IngestionService()
 
                         content = b"Simple text content here."
@@ -341,10 +386,13 @@ class TestIngestionServiceParsers:
         with patch("app.services.ingestion.get_settings", return_value=mock_settings):
             with patch("app.rag.chunking.get_settings", return_value=mock_settings):
                 with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                    with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                    with patch(
+                        "app.rag.vectorstore.get_embedding_service",
+                        return_value=mock_embedding_service,
+                    ):
                         service = IngestionService()
 
-                        content = "Unicode: café, naïve, résumé".encode("utf-8")
+                        content = "Unicode: café, naïve, résumé".encode()
                         file = io.BytesIO(content)
 
                         result = service._parse_txt(file)

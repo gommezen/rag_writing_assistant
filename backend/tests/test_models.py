@@ -1,19 +1,14 @@
 """Tests for data models."""
 
-import pytest
-from datetime import datetime
-
 from app.models import (
+    ChunkingConfig,
     ConfidenceLevel,
-    SourceReference,
-    GeneratedSection,
-    RetrievalMetadata,
     Document,
     DocumentMetadata,
-    DocumentType,
     DocumentStatus,
-    DocumentChunk,
-    ChunkingConfig,
+    DocumentType,
+    GeneratedSection,
+    SourceReference,
 )
 
 

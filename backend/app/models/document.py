@@ -12,13 +12,16 @@ from uuid import uuid4
 
 class DocumentType(str, Enum):
     """Supported document types."""
+
     PDF = "pdf"
     DOCX = "docx"
     TXT = "txt"
+    URL = "url"
 
 
 class DocumentStatus(str, Enum):
     """Document processing status."""
+
     PENDING = "pending"
     PROCESSING = "processing"
     READY = "ready"
@@ -28,6 +31,7 @@ class DocumentStatus(str, Enum):
 @dataclass
 class DocumentMetadata:
     """Metadata extracted from or assigned to a document."""
+
     title: str
     author: str | None = None
     created_date: datetime | None = None
@@ -67,6 +71,7 @@ class DocumentMetadata:
 @dataclass
 class DocumentChunk:
     """A chunk of document content with metadata for retrieval."""
+
     chunk_id: str
     document_id: str
     content: str
@@ -108,6 +113,7 @@ class DocumentChunk:
 @dataclass
 class Document:
     """A document in the system with full metadata and processing status."""
+
     document_id: str
     filename: str
     document_type: DocumentType
@@ -166,6 +172,7 @@ class Document:
 @dataclass
 class ChunkingConfig:
     """Configuration for document chunking - tracked for auditability."""
+
     chunk_size: int = 500
     chunk_overlap: int = 100
     separator: str = "\n\n"

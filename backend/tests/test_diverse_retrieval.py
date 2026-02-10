@@ -6,20 +6,19 @@ Verifies that:
 - Blind spots are identified when regions are missing
 """
 
-import pytest
 from unittest.mock import MagicMock, patch
 
+import pytest
 from app.models import (
     CoverageDescriptor,
-    DocumentChunk,
     DocumentCoverage,
     DocumentRegion,
     RetrievalType,
 )
 from app.services.diverse_retrieval import (
-    DiverseRetrievalService,
     REGION_BOUNDARIES,
     REGION_WEIGHTS,
+    DiverseRetrievalService,
     get_diverse_retrieval_service,
 )
 
@@ -43,9 +42,13 @@ class TestDiverseRetrieval:
     @pytest.fixture
     def diverse_service(self, mock_vector_store):
         """Create diverse retrieval service with mocked vector store."""
-        with patch("app.services.diverse_retrieval.get_vector_store", return_value=mock_vector_store):
+        with patch(
+            "app.services.diverse_retrieval.get_vector_store", return_value=mock_vector_store
+        ):
             with patch("app.services.diverse_retrieval.get_settings") as mock_settings:
                 mock_settings.return_value.top_k_retrieval = 10
+                mock_settings.return_value.default_coverage_pct = 35.0
+                mock_settings.return_value.max_coverage_pct = 80.0
                 service = DiverseRetrievalService()
                 yield service
 
@@ -130,11 +133,19 @@ class TestDiverseRetrieval:
         summary_lower = coverage.coverage_summary.lower()
         assert "coverage" in summary_lower or "chunks" in summary_lower
         # Should include guidance language appropriate to the coverage level
-        assert any(term in summary_lower for term in [
-            "exploratory", "tentative", "limited",  # low coverage
-            "moderate", "patterns", "blind spots",  # moderate coverage
-            "confident", "broader"  # high coverage
-        ])
+        assert any(
+            term in summary_lower
+            for term in [
+                "exploratory",
+                "tentative",
+                "limited",  # low coverage
+                "moderate",
+                "patterns",
+                "blind spots",  # moderate coverage
+                "confident",
+                "broader",  # high coverage
+            ]
+        )
 
     def test_blind_spots_identified(self, sample_chunks_factory):
         """Blind spots should be identified when regions are missing."""
@@ -169,10 +180,9 @@ class TestDiverseRetrieval:
         """Should only include chunks from specified documents."""
         mock_store = MagicMock()
         # Create chunks from multiple documents
-        mock_store.chunks = (
-            sample_chunks_factory(document_id="doc-001", count=10, metadata={"title": "Doc 1"}) +
-            sample_chunks_factory(document_id="doc-002", count=10, metadata={"title": "Doc 2"})
-        )
+        mock_store.chunks = sample_chunks_factory(
+            document_id="doc-001", count=10, metadata={"title": "Doc 1"}
+        ) + sample_chunks_factory(document_id="doc-002", count=10, metadata={"title": "Doc 2"})
 
         with patch("app.services.diverse_retrieval.get_vector_store", return_value=mock_store):
             with patch("app.services.diverse_retrieval.get_settings"):
@@ -328,6 +338,7 @@ class TestDiverseRetrievalServiceSingleton:
             with patch("app.services.diverse_retrieval.get_settings"):
                 # Reset singleton
                 import app.services.diverse_retrieval as module
+
                 module._diverse_retrieval_service = None
 
                 service1 = get_diverse_retrieval_service()

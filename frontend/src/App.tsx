@@ -7,8 +7,8 @@
  * - Right sidebar: Source details (part of DocumentEditor)
  */
 
-import { useState, useCallback, useRef, useEffect } from 'react';
-import { Sun, Moon, ChevronLeft, ChevronRight, Download, Copy, Check, Eye, Lightbulb, MessageSquare, PenTool, Settings, X } from 'lucide-react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { Sun, Moon, ChevronLeft, ChevronRight, ChevronDown, Download, Copy, Check, Eye, Lightbulb, Link, MessageSquare, PenTool, Settings, X } from 'lucide-react';
 import { DocumentEditor } from './components/DocumentEditor';
 import { DocumentPreview } from './components/DocumentPreview';
 import { WarningBanner } from './components/WarningBanner';
@@ -29,7 +29,9 @@ import {
   useConversations,
   useConversation,
   useDeleteConversation,
+  useUploadFromUrl,
 } from './hooks';
+import { apiClient } from './api/client';
 import type { GeneratedSection, Document, RetrievalMetadata, ChatMessage, CoverageDescriptor, ContextUsed } from './types';
 import './App.css';
 
@@ -52,6 +54,7 @@ function App() {
     return saved === 'true';
   });
   const [copied, setCopied] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
   const [previewDocumentId, setPreviewDocumentId] = useState<string | null>(null);
   const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([]);
   const [promptHighlighted, setPromptHighlighted] = useState(false);
@@ -76,6 +79,9 @@ function App() {
   const [intentMode, setIntentMode] = useState<'auto' | 'analysis' | 'qa' | 'writing'>('auto');
   const [showModeSettings, setShowModeSettings] = useState(false);
 
+  // URL ingestion state
+  const [urlInput, setUrlInput] = useState('');
+
   // Toast notifications
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
@@ -97,16 +103,19 @@ function App() {
   const { data: documentsData, isLoading: isLoadingDocuments } = useDocuments();
   const { uploadedDocumentId, clearUploadedDocumentId, ...uploadMutation } = useUploadDocument();
   const deleteMutation = useDeleteDocument();
+  const { uploadedDocumentId: urlUploadedDocId, clearUploadedDocumentId: clearUrlUploadedDocId, ...urlUploadMutation } = useUploadFromUrl();
 
-  // Poll for document processing completion
-  const { data: polledDocument } = useDocumentPolling(uploadedDocumentId);
+  // Poll for document processing completion (file upload or URL)
+  const activeUploadId = uploadedDocumentId ?? urlUploadedDocId;
+  const { data: polledDocument } = useDocumentPolling(activeUploadId);
 
   // Clear polling when document reaches terminal state
   useEffect(() => {
     if (polledDocument?.status === 'ready' || polledDocument?.status === 'failed') {
       clearUploadedDocumentId();
+      clearUrlUploadedDocId();
     }
-  }, [polledDocument?.status, clearUploadedDocumentId]);
+  }, [polledDocument?.status, clearUploadedDocumentId, clearUrlUploadedDocId]);
 
   // Generation hooks
   const generateMutation = useGenerateDraft();
@@ -125,7 +134,7 @@ function App() {
     ? documentsData?.documents.find((d) => d.document_id === previewDocumentId)
     : null;
 
-  const documents = documentsData?.documents ?? [];
+  const documents = useMemo(() => documentsData?.documents ?? [], [documentsData?.documents]);
 
   // Toast helpers
   const addToast = useCallback((message: string, type: 'error' | 'success' | 'info' = 'error') => {
@@ -148,6 +157,7 @@ function App() {
 
       try {
         await uploadMutation.mutateAsync({ file });
+        addToast(`"${file.name}" uploaded. Processing...`, 'info');
       } catch (error) {
         console.error('Upload failed:', error);
         addToast('Upload failed. Please try again.', 'error');
@@ -155,6 +165,33 @@ function App() {
     },
     [uploadMutation, addToast]
   );
+
+  // Handle URL submission
+  const handleUrlSubmit = useCallback(async () => {
+    const trimmed = urlInput.trim();
+    if (!trimmed) return;
+
+    // Basic URL validation
+    try {
+      const parsed = new URL(trimmed);
+      if (!['http:', 'https:'].includes(parsed.protocol)) {
+        addToast('Please enter an http or https URL.', 'error');
+        return;
+      }
+    } catch {
+      addToast('Please enter a valid URL.', 'error');
+      return;
+    }
+
+    try {
+      await urlUploadMutation.mutateAsync({ url: trimmed });
+      addToast('URL submitted. Fetching content...', 'info');
+      setUrlInput('');
+    } catch (error) {
+      console.error('URL ingestion failed:', error);
+      addToast(`URL ingestion failed: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+    }
+  }, [urlInput, urlUploadMutation, addToast]);
 
   const handleFileUpload = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -204,11 +241,13 @@ function App() {
           next.delete(documentId);
           return next;
         });
+        addToast('Document deleted.', 'success');
       } catch (error) {
         console.error('Delete failed:', error);
+        addToast('Failed to delete document.', 'error');
       }
     },
-    [deleteMutation]
+    [deleteMutation, addToast]
   );
 
   // Handle document selection toggle
@@ -252,6 +291,7 @@ function App() {
       setRetrievalMetadata(result.retrieval_metadata);
       // Store prompt for Write-Chat connection
       setLastGenerationPrompt(prompt);
+      addToast('Draft generated successfully.', 'success');
 
       // Collect global warnings from retrieval
       const warnings: string[] = [];
@@ -273,8 +313,9 @@ function App() {
   // Global keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Escape: close modals
+      // Escape: close modals and menus
       if (e.key === 'Escape') {
+        if (showExportMenu) setShowExportMenu(false);
         if (showModeSettings) setShowModeSettings(false);
         if (previewDocumentId) setPreviewDocumentId(null);
       }
@@ -288,7 +329,7 @@ function App() {
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [showModeSettings, previewDocumentId, mode, prompt, generateMutation.isPending, handleGenerate]);
+  }, [showExportMenu, showModeSettings, previewDocumentId, mode, prompt, generateMutation.isPending, handleGenerate]);
 
   // Handle section content change
   const handleSectionChange = useCallback((sectionId: string, content: string) => {
@@ -328,11 +369,12 @@ function App() {
         );
       } catch (error) {
         console.error('Regeneration failed:', error);
+        addToast(`Regeneration failed: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
       } finally {
         setRegeneratingSection(null);
       }
     },
-    [prompt, sections, regenerateMutation]
+    [prompt, sections, regenerateMutation, addToast]
   );
 
   // Handle section accept with visual feedback
@@ -349,18 +391,46 @@ function App() {
     setTimeout(() => setAcceptedSection(null), 1500);
   }, []);
 
-  // Handle export generated content as TXT
-  const handleExport = useCallback(() => {
+  // Handle export generated content
+  const handleExportFormat = useCallback(async (format: 'txt' | 'docx' | 'pdf') => {
     if (sections.length === 0) return;
-    const content = sections.map((s) => s.content).join('\n\n');
-    const blob = new Blob([content], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'generated-content.txt';
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [sections]);
+    setShowExportMenu(false);
+
+    if (format === 'txt') {
+      const content = sections.map((s) => s.content).join('\n\n');
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'generated-content.txt';
+      a.click();
+      URL.revokeObjectURL(url);
+      return;
+    }
+
+    try {
+      const exportSections = sections.map((s) => ({
+        heading: s.title ?? s.section_id.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+        content: s.content,
+        sources: (s.sources ?? []).map((src) => ({
+          document_title: src.metadata?.title ?? src.document_id,
+          relevance_score: src.relevance_score,
+        })),
+      }));
+
+      const blob = await apiClient.exportDocument(exportSections, format, 'Generated Document');
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `generated-content.${format}`;
+      a.click();
+      URL.revokeObjectURL(url);
+      addToast(`Exported as ${format.toUpperCase()}.`, 'success');
+    } catch (error) {
+      console.error('Export failed:', error);
+      addToast(`Export failed: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+    }
+  }, [sections, addToast]);
 
   // Handle copy to clipboard
   const handleCopy = useCallback(async () => {
@@ -378,8 +448,9 @@ function App() {
       setSuggestedQuestions(result.questions);
     } catch (error) {
       console.error('Failed to generate suggestions:', error);
+      addToast('Failed to generate suggestions.', 'error');
     }
-  }, [suggestionsMutation]);
+  }, [suggestionsMutation, addToast]);
 
   // Handle clicking on a suggested question
   const handleSuggestionClick = useCallback((question: string) => {
@@ -473,8 +544,9 @@ function App() {
       }
     } catch (error) {
       console.error('Failed to delete conversation:', error);
+      addToast('Failed to delete conversation.', 'error');
     }
-  }, [deleteConversationMutation, conversationId, handleNewChat]);
+  }, [deleteConversationMutation, conversationId, handleNewChat, addToast]);
 
   // Handle "Discuss in Chat" - switches to chat mode with context
   const handleDiscussInChat = useCallback(async () => {
@@ -607,6 +679,32 @@ function App() {
                   </span>
                 </label>
                 <p className="upload-area__hint">PDF, DOCX, or TXT</p>
+              </div>
+            )}
+
+            {/* URL Input */}
+            {!sidebarCollapsed && (
+              <div className="url-input-area">
+                <div className="url-input-area__group">
+                  <input
+                    type="url"
+                    className="url-input-area__input"
+                    placeholder="Paste a URL..."
+                    value={urlInput}
+                    onChange={(e) => setUrlInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleUrlSubmit(); }}
+                    disabled={urlUploadMutation.isPending}
+                  />
+                  <button
+                    type="button"
+                    className="url-input-area__btn"
+                    onClick={handleUrlSubmit}
+                    disabled={!urlInput.trim() || urlUploadMutation.isPending}
+                    aria-label="Add URL"
+                  >
+                    <Link size={16} />
+                  </button>
+                </div>
               </div>
             )}
 
@@ -808,15 +906,32 @@ function App() {
                       {copied ? <Check size={16} /> : <Copy size={16} />}
                       <span>{copied ? 'Copied!' : 'Copy'}</span>
                     </button>
-                    <button
-                      type="button"
-                      className="export-btn"
-                      onClick={handleExport}
-                      aria-label="Export content as text file"
-                    >
-                      <Download size={16} />
-                      <span>Export TXT</span>
-                    </button>
+                    <div className="export-dropdown">
+                      <button
+                        type="button"
+                        className="export-btn"
+                        onClick={() => setShowExportMenu((prev) => !prev)}
+                        aria-label="Export content"
+                        aria-expanded={showExportMenu}
+                      >
+                        <Download size={16} />
+                        <span>Export</span>
+                        <ChevronDown size={14} />
+                      </button>
+                      {showExportMenu && (
+                        <div className="export-dropdown__menu">
+                          <button type="button" className="export-dropdown__item" onClick={() => handleExportFormat('txt')}>
+                            Plain Text (.txt)
+                          </button>
+                          <button type="button" className="export-dropdown__item" onClick={() => handleExportFormat('docx')}>
+                            Word (.docx)
+                          </button>
+                          <button type="button" className="export-dropdown__item" onClick={() => handleExportFormat('pdf')}>
+                            PDF (.pdf)
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
                 {generateMutation.isPending && sections.length === 0 ? (

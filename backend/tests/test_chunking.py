@@ -1,7 +1,5 @@
 """Tests for document chunking."""
 
-import pytest
-
 from app.models import ChunkingConfig
 from app.rag.chunking import DocumentChunker
 
@@ -22,9 +20,7 @@ class TestDocumentChunker:
         assert chunks == []
 
     def test_single_paragraph_creates_one_chunk(self):
-        chunker = DocumentChunker(
-            ChunkingConfig(chunk_size=1000, chunk_overlap=100)
-        )
+        chunker = DocumentChunker(ChunkingConfig(chunk_size=1000, chunk_overlap=100))
         content = "This is a single paragraph of text."
         chunks = chunker.chunk_document("doc-1", content)
 
@@ -34,9 +30,7 @@ class TestDocumentChunker:
         assert chunks[0].chunk_index == 0
 
     def test_multiple_paragraphs_split_correctly(self):
-        chunker = DocumentChunker(
-            ChunkingConfig(chunk_size=50, chunk_overlap=10)
-        )
+        chunker = DocumentChunker(ChunkingConfig(chunk_size=50, chunk_overlap=10))
         content = "First paragraph here.\n\nSecond paragraph here.\n\nThird paragraph here."
         chunks = chunker.chunk_document("doc-1", content)
 
@@ -59,9 +53,7 @@ class TestDocumentChunker:
         assert "chunk_strategy" in chunks[0].metadata
 
     def test_chunk_ids_are_unique(self):
-        chunker = DocumentChunker(
-            ChunkingConfig(chunk_size=50, chunk_overlap=10)
-        )
+        chunker = DocumentChunker(ChunkingConfig(chunk_size=50, chunk_overlap=10))
         content = "Para one.\n\nPara two.\n\nPara three.\n\nPara four."
         chunks = chunker.chunk_document("doc-1", content)
 
@@ -69,9 +61,7 @@ class TestDocumentChunker:
         assert len(chunk_ids) == len(set(chunk_ids))  # All unique
 
     def test_char_positions_are_tracked(self):
-        chunker = DocumentChunker(
-            ChunkingConfig(chunk_size=1000, chunk_overlap=0)
-        )
+        chunker = DocumentChunker(ChunkingConfig(chunk_size=1000, chunk_overlap=0))
         content = "First paragraph.\n\nSecond paragraph."
         chunks = chunker.chunk_document("doc-1", content)
 

@@ -1,5 +1,18 @@
 """Data models for RAG Document Intelligence."""
 
+from .chat import (
+    ChatMessage,
+    ChatMessageResponse,
+    ChatRequest,
+    ChatResponse,
+    ChatResult,
+    ChatRole,
+    ContextUsedResponse,
+    Conversation,
+    ConversationResponse,
+    ConversationSummary,
+    ConversationSummaryResponse,
+)
 from .common import (
     ConfidenceLevel,
     CoverageDescriptor,
@@ -40,19 +53,6 @@ from .generation import (
     SourceReferenceResponse,
     SuggestedQuestionsRequest,
     SuggestedQuestionsResponse,
-)
-from .chat import (
-    ChatMessage,
-    ChatMessageResponse,
-    ChatRequest,
-    ChatResponse,
-    ChatResult,
-    ChatRole,
-    ContextUsedResponse,
-    Conversation,
-    ConversationResponse,
-    ConversationSummary,
-    ConversationSummaryResponse,
 )
 
 __all__ = [

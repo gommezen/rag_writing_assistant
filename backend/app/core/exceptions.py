@@ -15,6 +15,7 @@ class RAGAssistantError(Exception):
 
 class DocumentError(RAGAssistantError):
     """Errors related to document operations."""
+
     pass
 
 
@@ -50,21 +51,25 @@ class UnsupportedDocumentTypeError(DocumentError):
 
 class RetrievalError(RAGAssistantError):
     """Errors related to retrieval operations."""
+
     pass
 
 
 class VectorStoreError(RetrievalError):
     """Error with vector store operations."""
+
     pass
 
 
 class EmbeddingError(RetrievalError):
     """Error generating embeddings."""
+
     pass
 
 
 class GenerationError(RAGAssistantError):
     """Errors related to content generation."""
+
     pass
 
 
@@ -90,9 +95,11 @@ class InsufficientContextError(GenerationError):
 
 class ValidationError(RAGAssistantError):
     """Validation errors for requests or data."""
+
     pass
 
 
 class ConfigurationError(RAGAssistantError):
     """Configuration or setup errors."""
+
     pass

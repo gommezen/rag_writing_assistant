@@ -6,7 +6,7 @@ from typing import Any
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 
-from ...core import DocumentNotFoundError, DocumentProcessingError, UnsupportedDocumentTypeError
+from ...core import UnsupportedDocumentTypeError
 from ...services import get_ingestion_service
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
@@ -14,6 +14,7 @@ router = APIRouter(prefix="/documents", tags=["Documents"])
 
 class DocumentResponse(BaseModel):
     """Response model for a document."""
+
     document_id: str
     filename: str
     document_type: str
@@ -27,12 +28,14 @@ class DocumentResponse(BaseModel):
 
 class DocumentListResponse(BaseModel):
     """Response model for document list."""
+
     documents: list[DocumentResponse]
     total: int
 
 
 class ChunkResponse(BaseModel):
     """Response model for a document chunk."""
+
     chunk_id: str
     chunk_index: int
     content: str
@@ -42,6 +45,7 @@ class ChunkResponse(BaseModel):
 
 class DocumentChunksResponse(BaseModel):
     """Response model for document chunks."""
+
     document_id: str
     chunks: list[ChunkResponse]
     total_chunks: int
@@ -86,9 +90,7 @@ async def upload_document(
         )
 
         # Schedule background processing (does not block)
-        asyncio.create_task(
-            service.process_document_background(document.document_id, file_content)
-        )
+        asyncio.create_task(service.process_document_background(document.document_id, file_content))
 
         # Return immediately with PENDING status
         return DocumentResponse(
@@ -105,6 +107,56 @@ async def upload_document(
 
     except UnsupportedDocumentTypeError as e:
         raise HTTPException(status_code=400, detail=e.message)
+
+
+class UploadFromUrlRequest(BaseModel):
+    """Request model for URL document ingestion."""
+
+    url: str
+    title: str | None = None
+
+
+@router.post("/from-url", response_model=DocumentResponse)
+async def upload_from_url(req: UploadFromUrlRequest) -> DocumentResponse:
+    """Ingest a document from a URL (non-blocking).
+
+    Fetches the webpage, extracts text content, chunks and indexes it.
+    Returns immediately with PENDING status. Poll GET /documents/{id}
+    to check processing status.
+    """
+    # Validate URL scheme
+    from urllib.parse import urlparse
+
+    parsed = urlparse(req.url)
+    if parsed.scheme not in ("http", "https"):
+        raise HTTPException(status_code=400, detail="Only http and https URLs are supported")
+    if not parsed.netloc:
+        raise HTTPException(status_code=400, detail="Invalid URL")
+
+    service = get_ingestion_service()
+
+    try:
+        document = service.create_url_document_record(
+            url=req.url,
+            title=req.title,
+        )
+
+        # Schedule background processing
+        asyncio.create_task(service.process_url_background(document.document_id, req.url))
+
+        return DocumentResponse(
+            document_id=document.document_id,
+            filename=document.filename,
+            document_type=document.document_type.value,
+            status=document.status.value,
+            metadata=document.metadata.to_dict(),
+            chunk_count=document.chunk_count,
+            created_at=document.created_at.isoformat(),
+            updated_at=document.updated_at.isoformat(),
+            error_message=document.error_message,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("", response_model=DocumentListResponse)

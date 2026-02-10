@@ -1,7 +1,5 @@
 """Tests for validation service."""
 
-import pytest
-
 from app.models import (
     ConfidenceLevel,
     GeneratedSection,
@@ -48,43 +46,30 @@ class TestValidationService:
 
         # Should not have insufficient context warning for 5 sources
         assert not any(
-            WarningType.INSUFFICIENT_CONTEXT in w and "No relevant" in w
-            for w in warnings
+            WarningType.INSUFFICIENT_CONTEXT in w and "No relevant" in w for w in warnings
         )
 
     def test_low_relevance_warns(self):
-        sources = [
-            self._create_source(chunk_id=f"chunk-{i}", score=0.5)
-            for i in range(5)
-        ]
+        sources = [self._create_source(chunk_id=f"chunk-{i}", score=0.5) for i in range(5)]
         warnings = self.service.check_retrieval_quality(sources)
 
         assert any(WarningType.LOW_RELEVANCE_SOURCES in w for w in warnings)
 
     def test_high_relevance_no_warning(self):
-        sources = [
-            self._create_source(chunk_id=f"chunk-{i}", score=0.9)
-            for i in range(5)
-        ]
+        sources = [self._create_source(chunk_id=f"chunk-{i}", score=0.9) for i in range(5)]
         warnings = self.service.check_retrieval_quality(sources)
 
         assert not any(WarningType.LOW_RELEVANCE_SOURCES in w for w in warnings)
 
     def test_single_document_dominance_warns(self):
         # All 5 sources from same document
-        sources = [
-            self._create_source(doc_id="doc-1", chunk_id=f"chunk-{i}")
-            for i in range(5)
-        ]
+        sources = [self._create_source(doc_id="doc-1", chunk_id=f"chunk-{i}") for i in range(5)]
         warnings = self.service.check_retrieval_quality(sources)
 
         assert any(WarningType.SOURCE_OVER_RELIANCE in w for w in warnings)
 
     def test_diverse_documents_no_dominance_warning(self):
-        sources = [
-            self._create_source(doc_id=f"doc-{i}", chunk_id=f"chunk-{i}")
-            for i in range(5)
-        ]
+        sources = [self._create_source(doc_id=f"doc-{i}", chunk_id=f"chunk-{i}") for i in range(5)]
         warnings = self.service.check_retrieval_quality(sources)
 
         assert not any(WarningType.SOURCE_OVER_RELIANCE in w for w in warnings)
@@ -169,6 +154,5 @@ class TestSectionValidation:
         # Should not have major warnings
         assert not any(WarningType.POTENTIAL_HALLUCINATION in w for w in warnings)
         assert not any(
-            WarningType.INSUFFICIENT_CONTEXT in w and "Low confidence" in w
-            for w in warnings
+            WarningType.INSUFFICIENT_CONTEXT in w and "Low confidence" in w for w in warnings
         )

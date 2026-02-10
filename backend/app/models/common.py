@@ -15,6 +15,7 @@ class ConfidenceLevel(str, Enum):
 
     'unknown' means we couldn't determine confidence, not that it's high.
     """
+
     HIGH = "high"
     MEDIUM = "medium"
     LOW = "low"
@@ -23,19 +24,22 @@ class ConfidenceLevel(str, Enum):
 
 class RetrievalConfidenceLevel(str, Enum):
     """Confidence levels for retrieval quality, used for model routing."""
-    HIGH = "high"      # Strong relevance - use fast model
+
+    HIGH = "high"  # Strong relevance - use fast model
     MEDIUM = "medium"  # Moderate relevance - use standard model
-    LOW = "low"        # Low relevance - use quality model with uncertainty prompts
+    LOW = "low"  # Low relevance - use quality model with uncertainty prompts
 
 
 class RetrievalType(str, Enum):
     """Type of retrieval strategy used."""
+
     SIMILARITY = "similarity"
     DIVERSE = "diverse"
 
 
 class DocumentRegion(str, Enum):
     """Regions within a document for diverse sampling."""
+
     INTRO = "intro"
     MIDDLE = "middle"
     CONCLUSION = "conclusion"
@@ -43,6 +47,7 @@ class DocumentRegion(str, Enum):
 
 class QueryIntent(str, Enum):
     """Detected intent of a user query."""
+
     ANALYSIS = "analysis"
     QA = "qa"
     WRITING = "writing"
@@ -54,6 +59,7 @@ class SummaryScope(str, Enum):
     BROAD: "Summarize this document" → exploratory overview + suggested questions
     FOCUSED: "Summarize X in this document" → deep synthesis on specific topic
     """
+
     BROAD = "broad"
     FOCUSED = "focused"
     NOT_APPLICABLE = "not_applicable"  # For non-analysis intents
@@ -66,6 +72,7 @@ class SourceReference:
     This model ensures every piece of generated content is traceable
     back to its source documents.
     """
+
     document_id: str
     chunk_id: str
     excerpt: str
@@ -98,6 +105,7 @@ class DocumentCoverage:
 
     Tracks how much of a document was seen during retrieval.
     """
+
     document_id: str
     document_title: str
     chunks_seen: int
@@ -131,6 +139,7 @@ class CoverageDescriptor:
     This is computed BEFORE prompting to condition LLM responses on
     how representative the retrieved context is.
     """
+
     retrieval_type: RetrievalType
     chunks_seen: int
     chunks_total: int
@@ -146,8 +155,7 @@ class CoverageDescriptor:
             "chunks_total": self.chunks_total,
             "coverage_percentage": round(self.coverage_percentage, 1),
             "document_coverage": {
-                doc_id: cov.to_dict()
-                for doc_id, cov in self.document_coverage.items()
+                doc_id: cov.to_dict() for doc_id, cov in self.document_coverage.items()
             },
             "blind_spots": self.blind_spots,
             "coverage_summary": self.coverage_summary,
@@ -183,6 +191,7 @@ class IntentClassification:
     Determines which retrieval strategy to use.
     For ANALYSIS intent, also determines summary scope (broad vs focused).
     """
+
     intent: QueryIntent
     confidence: float
     reasoning: str
@@ -221,6 +230,7 @@ class GeneratedSection:
     sources is never optional - if no sources were found, it's an empty list
     and appropriate warnings should be included.
     """
+
     section_id: str
     content: str
     sources: list[SourceReference]  # Never optional - empty list if none found
@@ -256,6 +266,7 @@ class GeneratedSection:
 @dataclass
 class RetrievalMetadata:
     """Metadata about the retrieval process for auditability."""
+
     query: str
     top_k: int
     similarity_threshold: float
@@ -288,6 +299,7 @@ class RetrievalMetadata:
 @dataclass
 class WarningType:
     """Predefined warning types for consistency."""
+
     INSUFFICIENT_CONTEXT = "insufficient_context"
     LOW_RELEVANCE_SOURCES = "low_relevance_sources"
     SOURCE_OVER_RELIANCE = "source_over_reliance"
@@ -299,6 +311,7 @@ class WarningType:
 @dataclass
 class RetrievalConfidenceMetrics:
     """Metrics used to compute retrieval confidence for model routing."""
+
     avg_relevance_score: float
     max_relevance_score: float
     high_quality_chunk_count: int  # Chunks above 0.70 threshold
@@ -324,6 +337,7 @@ class RetrievalConfidence:
     - MEDIUM confidence: Use standard model (qwen:7b)
     - LOW confidence: Use quality model (llama:8b) with uncertainty prompts
     """
+
     level: RetrievalConfidenceLevel
     metrics: RetrievalConfidenceMetrics
     reasoning: str

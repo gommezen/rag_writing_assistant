@@ -1,7 +1,5 @@
 """Health check endpoint."""
 
-from typing import Any
-
 from fastapi import APIRouter
 from pydantic import BaseModel
 
@@ -12,6 +10,7 @@ router = APIRouter(tags=["Health"])
 
 class VectorStoreStats(BaseModel):
     """Vector store statistics."""
+
     total_chunks: int
     total_documents: int
     index_trained: bool
@@ -19,6 +18,7 @@ class VectorStoreStats(BaseModel):
 
 class HealthResponse(BaseModel):
     """Health check response."""
+
     status: str
     vector_store: VectorStoreStats
 

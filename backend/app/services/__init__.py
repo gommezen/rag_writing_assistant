@@ -1,7 +1,7 @@
 """Services for RAG Document Intelligence."""
 
 from .chat import ChatService, get_chat_service
-from .confidence import ConfidenceService, get_confidence_service, LOW_CONFIDENCE_SUFFIX
+from .confidence import LOW_CONFIDENCE_SUFFIX, ConfidenceService, get_confidence_service
 from .diverse_retrieval import DiverseRetrievalService, get_diverse_retrieval_service
 from .generation import GenerationService, get_generation_service
 from .ingestion import IngestionService, get_ingestion_service

@@ -43,6 +43,9 @@ asyncio_mode = "auto"
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
+markers = [
+    "integration: tests requiring external services (Ollama, etc.)",
+]
 
 [tool.ruff]
 line-length = 100

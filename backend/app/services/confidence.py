@@ -52,9 +52,7 @@ class ConfidenceService:
         scores = [s.relevance_score for s in sources]
         avg_relevance = sum(scores) / len(scores)
         max_relevance = max(scores)
-        high_quality_count = sum(
-            1 for score in scores if score >= self.HIGH_QUALITY_THRESHOLD
-        )
+        high_quality_count = sum(1 for score in scores if score >= self.HIGH_QUALITY_THRESHOLD)
 
         # Compute source diversity (1 - max_doc_proportion)
         # Higher diversity = sources spread across more documents

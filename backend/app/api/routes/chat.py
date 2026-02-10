@@ -1,10 +1,9 @@
 """Chat endpoints for multi-turn conversations with documents."""
 
 from fastapi import APIRouter, HTTPException
-
-from ...core import GenerationError, LLMError
 from pydantic import BaseModel, Field
 
+from ...core import GenerationError, LLMError
 from ...models import (
     ChatRequest,
     ChatResponse,
@@ -98,6 +97,7 @@ async def list_conversations() -> list[ConversationSummaryResponse]:
 
 class UpdateTitleRequest(BaseModel):
     """Request to update a conversation's title."""
+
     title: str = Field(..., min_length=1, max_length=200)
 
 

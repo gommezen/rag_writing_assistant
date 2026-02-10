@@ -7,7 +7,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from .api import chat_router, documents_router, generation_router, health_router
+from .api import chat_router, documents_router, export_router, generation_router, health_router
 from .config import get_settings
 from .core import RAGAssistantError, get_logger
 
@@ -73,7 +73,7 @@ app.include_router(health_router, prefix="/api")
 app.include_router(documents_router, prefix="/api")
 app.include_router(generation_router, prefix="/api")
 app.include_router(chat_router, prefix="/api")
-
+app.include_router(export_router, prefix="/api")
 
 
 if __name__ == "__main__":

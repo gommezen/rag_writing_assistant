@@ -11,6 +11,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import BinaryIO
 
+import httpx
+from bs4 import BeautifulSoup
 from docx import Document as DocxDocument
 from pypdf import PdfReader
 
@@ -57,7 +59,7 @@ class IngestionService:
         registry_path = self.settings.documents_dir / "registry.json"
         if registry_path.exists():
             try:
-                with open(registry_path, "r") as f:
+                with open(registry_path) as f:
                     data = json.load(f)
                     for doc_data in data:
                         doc = Document.from_dict(doc_data)
@@ -401,6 +403,165 @@ class IngestionService:
         except Exception as e:
             raise DocumentProcessingError(f"TXT parsing failed: {e}")
 
+    def create_url_document_record(
+        self,
+        url: str,
+        title: str | None = None,
+    ) -> Document:
+        """Create a document record for a URL source.
+
+        Args:
+            url: The URL to fetch content from
+            title: Optional title (defaults to URL hostname)
+
+        Returns:
+            Document object with PENDING status
+        """
+        from urllib.parse import urlparse
+
+        parsed = urlparse(url)
+        display_title = title or parsed.netloc or url
+
+        doc_metadata = DocumentMetadata(
+            title=display_title,
+            source_path=url,
+            custom_metadata={"url": url},
+        )
+
+        document = Document.create(
+            filename=url,
+            document_type=DocumentType.URL,
+            metadata=doc_metadata,
+        )
+
+        document.status = DocumentStatus.PENDING
+        self._documents[document.document_id] = document
+        self._save_document_registry()
+
+        logger.audit(
+            action="url_document_record_created",
+            resource_type="document",
+            resource_id=document.document_id,
+            url=url,
+        )
+
+        return document
+
+    async def process_url_background(
+        self,
+        document_id: str,
+        url: str,
+    ) -> None:
+        """Fetch and process a URL in the background.
+
+        Args:
+            document_id: ID of the document to process
+            url: URL to fetch content from
+        """
+        document = self._documents.get(document_id)
+        if not document:
+            logger.error("Document not found for URL processing", document_id=document_id)
+            return
+
+        document.status = DocumentStatus.PROCESSING
+        document.updated_at = datetime.now(UTC)
+        self._save_document_registry()
+
+        logger.audit(
+            action="url_processing_started",
+            resource_type="document",
+            resource_id=document_id,
+            url=url,
+        )
+
+        try:
+            # Fetch URL content
+            loop = asyncio.get_event_loop()
+            content = await loop.run_in_executor(
+                _executor,
+                self._fetch_and_parse_url,
+                url,
+            )
+
+            if not content or len(content.strip()) < 50:
+                raise DocumentProcessingError("Could not extract meaningful text from URL")
+
+            document.metadata.word_count = len(content.split())
+
+            # Chunk the content
+            chunks = self.chunker.chunk_document(
+                document_id=document.document_id,
+                content=content,
+                metadata={
+                    "title": document.metadata.title,
+                    "url": url,
+                },
+            )
+
+            # Add chunks to vector store
+            await loop.run_in_executor(
+                _executor,
+                self.vector_store.add_chunks,
+                chunks,
+            )
+
+            document.chunk_count = len(chunks)
+            document.status = DocumentStatus.READY
+            document.updated_at = datetime.now(UTC)
+
+            logger.audit(
+                action="url_document_ingested",
+                resource_type="document",
+                resource_id=document_id,
+                chunk_count=len(chunks),
+                word_count=document.metadata.word_count,
+            )
+
+        except Exception as e:
+            document.status = DocumentStatus.FAILED
+            document.error_message = str(e)
+            document.updated_at = datetime.now(UTC)
+            logger.error(
+                "URL processing failed",
+                document_id=document_id,
+                url=url,
+                error=str(e),
+            )
+
+        finally:
+            self._save_document_registry()
+
+    @staticmethod
+    def _fetch_and_parse_url(url: str) -> str:
+        """Fetch a URL and extract text content.
+
+        Strips script, style, nav, footer, and header elements.
+        """
+        response = httpx.get(
+            url,
+            follow_redirects=True,
+            timeout=30.0,
+            headers={"User-Agent": "RAG-Document-Intelligence/1.0 (Document Ingestion)"},
+        )
+        response.raise_for_status()
+
+        soup = BeautifulSoup(response.text, "html.parser")
+
+        # Remove non-content elements
+        for tag in soup.find_all(
+            ["script", "style", "nav", "footer", "header", "aside", "noscript"]
+        ):
+            tag.decompose()
+
+        # Extract text
+        text = soup.get_text(separator="\n", strip=True)
+
+        # Clean up excessive blank lines
+        lines = [line.strip() for line in text.splitlines()]
+        cleaned = "\n\n".join(line for line in lines if line)
+
+        return cleaned
+
     def get_document(self, document_id: str) -> Document | None:
         """Get a document by ID."""
         return self._documents.get(document_id)
@@ -414,10 +575,7 @@ class IngestionService:
         Returns:
             List of chunks belonging to the document, sorted by chunk_index
         """
-        return [
-            chunk for chunk in self.vector_store.chunks
-            if chunk.document_id == document_id
-        ]
+        return [chunk for chunk in self.vector_store.chunks if chunk.document_id == document_id]
 
     def list_documents(self) -> list[Document]:
         """List all documents."""

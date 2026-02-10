@@ -18,6 +18,7 @@ import type {
   SuggestedQuestionsRequest,
   SuggestedQuestionsResponse,
   UploadDocumentParams,
+  UploadFromUrlParams,
 } from '../types';
 
 const API_BASE = '/api';
@@ -82,6 +83,16 @@ class ApiClient {
   async deleteDocument(documentId: string): Promise<{ status: string; document_id: string }> {
     return this.request(`/documents/${documentId}`, {
       method: 'DELETE',
+    });
+  }
+
+  async uploadFromUrl(params: UploadFromUrlParams): Promise<Document> {
+    return this.request('/documents/from-url', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(params),
     });
   }
 
@@ -160,6 +171,28 @@ class ApiClient {
       },
       body: JSON.stringify({ title }),
     });
+  }
+
+  // Export operations
+  async exportDocument(
+    sections: { heading: string; content: string; sources: { document_title: string; chunk_index?: number; relevance_score?: number }[] }[],
+    format: 'docx' | 'pdf',
+    documentTitle: string
+  ): Promise<Blob> {
+    const url = `${API_BASE}/export`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sections,
+        format,
+        document_title: documentTitle,
+      }),
+    });
+    if (!response.ok) {
+      throw new Error(`Export failed with status ${response.status}`);
+    }
+    return response.blob();
   }
 }
 

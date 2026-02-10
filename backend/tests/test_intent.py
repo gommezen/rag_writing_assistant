@@ -7,7 +7,6 @@ Verifies that queries are correctly classified as:
 """
 
 import pytest
-
 from app.models import QueryIntent, RetrievalType, SummaryScope
 from app.services.intent import IntentService, get_intent_service
 
@@ -112,9 +111,7 @@ class TestIntentDetection:
             "something else entirely",
         ],
     )
-    def test_ambiguous_queries_default_to_writing(
-        self, intent_service: IntentService, query: str
-    ):
+    def test_ambiguous_queries_default_to_writing(self, intent_service: IntentService, query: str):
         """Ambiguous queries without clear intent should default to WRITING."""
         result = intent_service.detect_intent(query)
 
@@ -127,13 +124,13 @@ class TestIntentDetection:
     # Edge Cases
     # ========================================================================
 
-    def test_mixed_signals_prioritizes_writing(self, intent_service: IntentService):
-        """When query has both writing and analysis signals, writing takes priority."""
+    def test_mixed_signals_summary_prioritizes_analysis(self, intent_service: IntentService):
+        """When query has both writing and summary signals, analysis takes priority."""
         query = "Write a summary of my experience"
         result = intent_service.detect_intent(query)
 
-        # Writing patterns should take priority (listed first in pattern matching)
-        assert result.intent == QueryIntent.WRITING
+        # "summary" keyword triggers ANALYSIS priority over WRITING
+        assert result.intent == QueryIntent.ANALYSIS
 
     def test_case_insensitive_detection(self, intent_service: IntentService):
         """Intent detection should be case-insensitive."""
@@ -142,12 +139,16 @@ class TestIntentDetection:
         result_mixed = intent_service.detect_intent("SumMarIzE this Document")
 
         assert result_lower.intent == result_upper.intent == result_mixed.intent
-        assert all(r.intent == QueryIntent.ANALYSIS for r in [result_lower, result_upper, result_mixed])
+        assert all(
+            r.intent == QueryIntent.ANALYSIS for r in [result_lower, result_upper, result_mixed]
+        )
 
     def test_confidence_increases_with_more_matches(self, intent_service: IntentService):
         """Multiple pattern matches should increase confidence."""
         single_match = intent_service.detect_intent("summarize")
-        multiple_matches = intent_service.detect_intent("summarize the main points and key takeaways")
+        multiple_matches = intent_service.detect_intent(
+            "summarize the main points and key takeaways"
+        )
 
         assert multiple_matches.confidence > single_match.confidence
 

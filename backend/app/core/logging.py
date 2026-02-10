@@ -4,10 +4,10 @@ Key principle: Never log raw document content or user data.
 Log operational metadata only.
 """
 
-import logging
 import json
+import logging
 import sys
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from typing import Any
 
 from ..config import get_settings
@@ -34,9 +34,7 @@ class AuditLogger:
                 handler.setFormatter(JsonFormatter())
             else:
                 handler.setFormatter(
-                    logging.Formatter(
-                        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-                    )
+                    logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
                 )
 
             self.logger.addHandler(handler)

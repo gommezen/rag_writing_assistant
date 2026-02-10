@@ -303,10 +303,14 @@ def build_regeneration_prompt(
     """
     context, _ = format_context(sources)
 
-    instructions = refinement_instructions or "Improve clarity and ensure all claims are well-supported."
+    instructions = (
+        refinement_instructions or "Improve clarity and ensure all claims are well-supported."
+    )
 
     user_prompt = PromptTemplates.REGENERATION_PROMPT.format(
-        original_section=original_section[:500] + "..." if len(original_section) > 500 else original_section,
+        original_section=original_section[:500] + "..."
+        if len(original_section) > 500
+        else original_section,
         refinement_instructions=instructions,
         context=context,
     )

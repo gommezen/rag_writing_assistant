@@ -45,7 +45,7 @@ class ConversationStore:
         """Load conversation index from disk."""
         if self.index_file.exists():
             try:
-                with open(self.index_file, "r", encoding="utf-8") as f:
+                with open(self.index_file, encoding="utf-8") as f:
                     data = json.load(f)
                     for item in data:
                         summary = ConversationSummary.from_dict(item)
@@ -119,7 +119,7 @@ class ConversationStore:
             return None
 
         try:
-            with open(conv_path, "r", encoding="utf-8") as f:
+            with open(conv_path, encoding="utf-8") as f:
                 data = json.load(f)
                 return Conversation.from_dict(data)
         except Exception as e:

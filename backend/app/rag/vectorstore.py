@@ -4,7 +4,6 @@ Provides a clean interface for storing and retrieving document chunks
 with their embeddings and metadata.
 """
 
-import json
 import pickle
 from pathlib import Path
 from typing import Any
@@ -14,7 +13,7 @@ import numpy as np
 
 from ..config import get_settings
 from ..core import VectorStoreError, get_logger
-from ..models import DocumentChunk, SourceReference
+from ..models import DocumentChunk
 from .embedding import get_embedding_service
 
 logger = get_logger(__name__)
@@ -54,7 +53,7 @@ class VectorStore:
 
                 # Load stored embedding model if available
                 if self._model_path.exists():
-                    with open(self._model_path, "r") as f:
+                    with open(self._model_path) as f:
                         self._stored_embedding_model = f.read().strip()
 
                 # Warn if embedding model has changed

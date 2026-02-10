@@ -1,8 +1,7 @@
 """Tests for retrieval service."""
 
-import pytest
 from datetime import datetime
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from app.models import DocumentChunk, RetrievalMetadata, SourceReference
 from app.services.retrieval import RetrievalService
@@ -23,13 +22,18 @@ class TestRetrievalServiceBasics:
 
         with patch("app.services.retrieval.get_settings", return_value=mock_settings):
             with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                with patch(
+                    "app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service
+                ):
                     # Set up vector store with chunks
                     from app.rag.vectorstore import VectorStore
+
                     vector_store = VectorStore(store_path=mock_settings.vectors_dir)
                     vector_store.add_chunks(chunks)
 
-                    with patch("app.services.retrieval.get_vector_store", return_value=vector_store):
+                    with patch(
+                        "app.services.retrieval.get_vector_store", return_value=vector_store
+                    ):
                         service = RetrievalService()
 
                         sources, metadata = service.retrieve(
@@ -64,12 +68,17 @@ class TestRetrievalServiceBasics:
 
         with patch("app.services.retrieval.get_settings", return_value=mock_settings):
             with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                with patch(
+                    "app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service
+                ):
                     from app.rag.vectorstore import VectorStore
+
                     vector_store = VectorStore(store_path=mock_settings.vectors_dir)
                     vector_store.add_chunks(chunks)
 
-                    with patch("app.services.retrieval.get_vector_store", return_value=vector_store):
+                    with patch(
+                        "app.services.retrieval.get_vector_store", return_value=vector_store
+                    ):
                         service = RetrievalService()
 
                         sources, metadata = service.retrieve(
@@ -92,12 +101,17 @@ class TestRetrievalServiceBasics:
 
         with patch("app.services.retrieval.get_settings", return_value=mock_settings):
             with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                with patch(
+                    "app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service
+                ):
                     from app.rag.vectorstore import VectorStore
+
                     vector_store = VectorStore(store_path=mock_settings.vectors_dir)
                     vector_store.add_chunks(chunks)
 
-                    with patch("app.services.retrieval.get_vector_store", return_value=vector_store):
+                    with patch(
+                        "app.services.retrieval.get_vector_store", return_value=vector_store
+                    ):
                         service = RetrievalService()
 
                         sources, metadata = service.retrieve(
@@ -109,17 +123,20 @@ class TestRetrievalServiceBasics:
                         assert len(sources) <= 5
                         assert metadata.top_k == 5
 
-    def test_empty_vector_store_returns_empty(
-        self, mock_settings, mock_embedding_service
-    ):
+    def test_empty_vector_store_returns_empty(self, mock_settings, mock_embedding_service):
         """Searching an empty store should return empty results."""
         with patch("app.services.retrieval.get_settings", return_value=mock_settings):
             with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                with patch(
+                    "app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service
+                ):
                     from app.rag.vectorstore import VectorStore
+
                     vector_store = VectorStore(store_path=mock_settings.vectors_dir)
 
-                    with patch("app.services.retrieval.get_vector_store", return_value=vector_store):
+                    with patch(
+                        "app.services.retrieval.get_vector_store", return_value=vector_store
+                    ):
                         service = RetrievalService()
 
                         sources, metadata = service.retrieve(query="Test query")
@@ -140,12 +157,17 @@ class TestRetrievalServiceFiltering:
 
         with patch("app.services.retrieval.get_settings", return_value=mock_settings):
             with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                with patch(
+                    "app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service
+                ):
                     from app.rag.vectorstore import VectorStore
+
                     vector_store = VectorStore(store_path=mock_settings.vectors_dir)
                     vector_store.add_chunks(doc1_chunks + doc2_chunks)
 
-                    with patch("app.services.retrieval.get_vector_store", return_value=vector_store):
+                    with patch(
+                        "app.services.retrieval.get_vector_store", return_value=vector_store
+                    ):
                         service = RetrievalService()
 
                         sources, _ = service.retrieve(
@@ -169,12 +191,17 @@ class TestRetrievalServiceFiltering:
 
         with patch("app.services.retrieval.get_settings", return_value=mock_settings):
             with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                with patch(
+                    "app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service
+                ):
                     from app.rag.vectorstore import VectorStore
+
                     vector_store = VectorStore(store_path=mock_settings.vectors_dir)
                     vector_store.add_chunks(doc1_chunks + doc2_chunks + doc3_chunks)
 
-                    with patch("app.services.retrieval.get_vector_store", return_value=vector_store):
+                    with patch(
+                        "app.services.retrieval.get_vector_store", return_value=vector_store
+                    ):
                         service = RetrievalService()
 
                         sources, _ = service.retrieve(
@@ -200,12 +227,17 @@ class TestRetrievalMetadata:
 
         with patch("app.services.retrieval.get_settings", return_value=mock_settings):
             with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                with patch(
+                    "app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service
+                ):
                     from app.rag.vectorstore import VectorStore
+
                     vector_store = VectorStore(store_path=mock_settings.vectors_dir)
                     vector_store.add_chunks(chunks)
 
-                    with patch("app.services.retrieval.get_vector_store", return_value=vector_store):
+                    with patch(
+                        "app.services.retrieval.get_vector_store", return_value=vector_store
+                    ):
                         service = RetrievalService()
 
                         _, metadata = service.retrieve(
@@ -231,12 +263,17 @@ class TestRetrievalMetadata:
 
         with patch("app.services.retrieval.get_settings", return_value=mock_settings):
             with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                with patch(
+                    "app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service
+                ):
                     from app.rag.vectorstore import VectorStore
+
                     vector_store = VectorStore(store_path=mock_settings.vectors_dir)
                     vector_store.add_chunks(chunks)
 
-                    with patch("app.services.retrieval.get_vector_store", return_value=vector_store):
+                    with patch(
+                        "app.services.retrieval.get_vector_store", return_value=vector_store
+                    ):
                         service = RetrievalService()
 
                         _, metadata = service.retrieve(query="Test query")
@@ -248,9 +285,7 @@ class TestRetrievalMetadata:
 class TestRetrievalExcerpts:
     """Tests for excerpt handling."""
 
-    def test_excerpt_truncation(
-        self, mock_settings, mock_embedding_service
-    ):
+    def test_excerpt_truncation(self, mock_settings, mock_embedding_service):
         """Long content should be truncated in excerpts."""
         long_content = "A" * 500  # 500 character content
         chunks = [
@@ -266,12 +301,17 @@ class TestRetrievalExcerpts:
 
         with patch("app.services.retrieval.get_settings", return_value=mock_settings):
             with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                with patch(
+                    "app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service
+                ):
                     from app.rag.vectorstore import VectorStore
+
                     vector_store = VectorStore(store_path=mock_settings.vectors_dir)
                     vector_store.add_chunks(chunks)
 
-                    with patch("app.services.retrieval.get_vector_store", return_value=vector_store):
+                    with patch(
+                        "app.services.retrieval.get_vector_store", return_value=vector_store
+                    ):
                         service = RetrievalService()
 
                         sources, _ = service.retrieve(
@@ -284,9 +324,7 @@ class TestRetrievalExcerpts:
                         if sources:
                             assert len(sources[0].excerpt) <= 203  # 200 + "..."
 
-    def test_short_content_not_truncated(
-        self, mock_settings, mock_embedding_service
-    ):
+    def test_short_content_not_truncated(self, mock_settings, mock_embedding_service):
         """Short content should not be truncated."""
         short_content = "Short content"
         chunks = [
@@ -302,12 +340,17 @@ class TestRetrievalExcerpts:
 
         with patch("app.services.retrieval.get_settings", return_value=mock_settings):
             with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                with patch(
+                    "app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service
+                ):
                     from app.rag.vectorstore import VectorStore
+
                     vector_store = VectorStore(store_path=mock_settings.vectors_dir)
                     vector_store.add_chunks(chunks)
 
-                    with patch("app.services.retrieval.get_vector_store", return_value=vector_store):
+                    with patch(
+                        "app.services.retrieval.get_vector_store", return_value=vector_store
+                    ):
                         service = RetrievalService()
 
                         sources, _ = service.retrieve(
@@ -331,12 +374,17 @@ class TestRetrievalForSources:
 
         with patch("app.services.retrieval.get_settings", return_value=mock_settings):
             with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                with patch(
+                    "app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service
+                ):
                     from app.rag.vectorstore import VectorStore
+
                     vector_store = VectorStore(store_path=mock_settings.vectors_dir)
                     vector_store.add_chunks(chunks)
 
-                    with patch("app.services.retrieval.get_vector_store", return_value=vector_store):
+                    with patch(
+                        "app.services.retrieval.get_vector_store", return_value=vector_store
+                    ):
                         service = RetrievalService()
 
                         results = service.retrieve_for_sources(

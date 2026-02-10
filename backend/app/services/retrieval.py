@@ -87,7 +87,9 @@ class RetrievalService:
             threshold = self._get_threshold_for_intent(intent)
 
         # Determine if reranking is enabled
-        reranker_enabled = use_reranker if use_reranker is not None else self.settings.reranker_enabled
+        reranker_enabled = (
+            use_reranker if use_reranker is not None else self.settings.reranker_enabled
+        )
 
         start_time = time.time()
 

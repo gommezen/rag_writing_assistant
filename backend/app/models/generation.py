@@ -5,29 +5,24 @@ These models define the API contracts for generation endpoints.
 
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any
 
 from pydantic import BaseModel, Field
 
 from .common import (
     ConfidenceLevel,
     CoverageDescriptor,
-    DocumentRegion,
     GeneratedSection,
     IntentClassification,
-    QueryIntent,
     RetrievalMetadata,
-    RetrievalType,
     SourceReference,
-    SummaryScope,
 )
-
 
 # Pydantic models for API request/response validation
 
 
 class SourceReferenceResponse(BaseModel):
     """API response model for source reference."""
+
     document_id: str
     chunk_id: str
     excerpt: str
@@ -47,6 +42,7 @@ class SourceReferenceResponse(BaseModel):
 
 class GeneratedSectionResponse(BaseModel):
     """API response model for a generated section."""
+
     section_id: str
     title: str | None = None  # Extracted from markdown heading (e.g., "Introduction")
     content: str
@@ -70,6 +66,7 @@ class GeneratedSectionResponse(BaseModel):
 
 class DocumentCoverageResponse(BaseModel):
     """API response model for document coverage."""
+
     document_id: str
     document_title: str
     chunks_seen: int
@@ -81,6 +78,7 @@ class DocumentCoverageResponse(BaseModel):
 
 class CoverageDescriptorResponse(BaseModel):
     """API response model for coverage descriptor."""
+
     retrieval_type: str
     chunks_seen: int
     chunks_total: int
@@ -115,6 +113,7 @@ class CoverageDescriptorResponse(BaseModel):
 
 class IntentClassificationResponse(BaseModel):
     """API response model for intent classification."""
+
     intent: str
     confidence: float
     reasoning: str
@@ -136,6 +135,7 @@ class IntentClassificationResponse(BaseModel):
 
 class RetrievalMetadataResponse(BaseModel):
     """API response model for retrieval metadata."""
+
     query: str
     top_k: int
     similarity_threshold: float
@@ -158,13 +158,18 @@ class RetrievalMetadataResponse(BaseModel):
             retrieval_time_ms=metadata.retrieval_time_ms,
             timestamp=metadata.timestamp.isoformat(),
             retrieval_type=metadata.retrieval_type.value,
-            coverage=CoverageDescriptorResponse.from_dataclass(metadata.coverage) if metadata.coverage else None,
-            intent=IntentClassificationResponse.from_dataclass(metadata.intent) if metadata.intent else None,
+            coverage=CoverageDescriptorResponse.from_dataclass(metadata.coverage)
+            if metadata.coverage
+            else None,
+            intent=IntentClassificationResponse.from_dataclass(metadata.intent)
+            if metadata.intent
+            else None,
         )
 
 
 class GenerationRequest(BaseModel):
     """Request to generate a new draft."""
+
     prompt: str = Field(..., min_length=1, max_length=10000, description="The writing prompt")
     document_ids: list[str] | None = Field(
         default=None,
@@ -189,6 +194,7 @@ class GenerationRequest(BaseModel):
 
 class RegenerateSectionRequest(BaseModel):
     """Request to regenerate a specific section."""
+
     section_id: str = Field(..., description="ID of the section to regenerate")
     original_content: str = Field(
         ...,
@@ -209,6 +215,7 @@ class RegenerateSectionRequest(BaseModel):
 
 class GenerationResponse(BaseModel):
     """Response containing generated content with full RAG metadata."""
+
     generation_id: str
     sections: list[GeneratedSectionResponse]
     retrieval_metadata: RetrievalMetadataResponse
@@ -222,6 +229,7 @@ class GenerationResponse(BaseModel):
 
 class RegenerateSectionResponse(BaseModel):
     """Response for section regeneration."""
+
     section: GeneratedSectionResponse
     retrieval_metadata: RetrievalMetadataResponse
     generation_time_ms: float
@@ -231,6 +239,7 @@ class RegenerateSectionResponse(BaseModel):
 
 class SuggestedQuestionsRequest(BaseModel):
     """Request to generate suggested questions based on documents."""
+
     document_ids: list[str] | None = Field(
         default=None,
         description="Specific documents to use. If None, uses all documents.",
@@ -247,6 +256,7 @@ class SuggestedQuestionsRequest(BaseModel):
 
 class SuggestedQuestionsResponse(BaseModel):
     """Response containing suggested questions."""
+
     questions: list[str]
     source_documents: list[str]  # Document IDs that were used
     generation_time_ms: float
@@ -260,6 +270,7 @@ class SuggestedQuestionsResponse(BaseModel):
 @dataclass
 class GenerationResult:
     """Internal result from generation service."""
+
     generation_id: str
     sections: list[GeneratedSection]
     retrieval_metadata: RetrievalMetadata
@@ -284,6 +295,7 @@ class GenerationResult:
 @dataclass
 class RegenerationResult:
     """Internal result from section regeneration."""
+
     section: GeneratedSection
     retrieval_metadata: RetrievalMetadata
     generation_time_ms: float

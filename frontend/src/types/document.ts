@@ -2,7 +2,7 @@
  * Document-related types.
  */
 
-export type DocumentType = 'pdf' | 'docx' | 'txt';
+export type DocumentType = 'pdf' | 'docx' | 'txt' | 'url';
 
 export type DocumentStatus = 'pending' | 'processing' | 'ready' | 'failed';
 
@@ -37,6 +37,11 @@ export interface UploadDocumentParams {
   file: File;
   title?: string;
   author?: string;
+}
+
+export interface UploadFromUrlParams {
+  url: string;
+  title?: string;
 }
 
 export interface ChunkResponse {

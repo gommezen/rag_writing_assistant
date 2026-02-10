@@ -150,10 +150,7 @@ class ValidationService:
             for source in section.sources:
                 used_chunk_ids.add(source.chunk_id)
 
-        return {
-            source.chunk_id: source.chunk_id in used_chunk_ids
-            for source in all_sources
-        }
+        return {source.chunk_id: source.chunk_id in used_chunk_ids for source in all_sources}
 
 
 # Singleton instance

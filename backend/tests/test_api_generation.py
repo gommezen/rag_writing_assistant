@@ -1,17 +1,22 @@
-"""Tests for generation API endpoints."""
+"""Tests for generation API endpoints.
+
+These tests require LLM service connectivity (Ollama).
+Marked as integration tests — skipped in pre-commit, run in CI.
+"""
 
 import io
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import patch, AsyncMock, MagicMock
 from fastapi.testclient import TestClient
+
+pytestmark = pytest.mark.integration
 
 
 class TestGenerateDraft:
     """Tests for draft generation endpoint."""
 
-    def test_generate_draft_success(
-        self, mock_settings, mock_embedding_service, mock_llm
-    ):
+    def test_generate_draft_success(self, mock_settings, mock_embedding_service, mock_llm):
         """Should successfully generate a draft."""
         self._reset_singletons()
 
@@ -25,33 +30,44 @@ class TestGenerateDraft:
                 with patch("app.services.retrieval.get_settings", return_value=mock_settings):
                     with patch("app.services.generation.get_settings", return_value=mock_settings):
                         with patch("app.rag.chunking.get_settings", return_value=mock_settings):
-                            with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                                with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                            with patch(
+                                "app.rag.vectorstore.get_settings", return_value=mock_settings
+                            ):
+                                with patch(
+                                    "app.rag.vectorstore.get_embedding_service",
+                                    return_value=mock_embedding_service,
+                                ):
                                     from app.main import app
+
                                     client = TestClient(app)
 
                                     # First upload a document
                                     files = {
-                                        "file": ("test.txt", io.BytesIO(b"Source content for generation."), "text/plain")
+                                        "file": (
+                                            "test.txt",
+                                            io.BytesIO(b"Source content for generation."),
+                                            "text/plain",
+                                        )
                                     }
                                     client.post("/api/documents", files=files)
 
                                     # Patch the LLM
                                     from app.services.generation import GenerationService
+
                                     original_init = GenerationService.__init__
 
                                     def patched_init(self):
                                         original_init(self)
                                         self._llm = mock_llm
 
-                                    with patch.object(GenerationService, '__init__', patched_init):
+                                    with patch.object(GenerationService, "__init__", patched_init):
                                         # Generate a draft
                                         response = client.post(
                                             "/api/generate",
                                             json={
                                                 "prompt": "Write about the source content",
                                                 "max_sections": 3,
-                                            }
+                                            },
                                         )
 
                                         assert response.status_code == 200
@@ -66,9 +82,7 @@ class TestGenerateDraft:
 
         self._reset_singletons()
 
-    def test_generate_draft_response_schema(
-        self, mock_settings, mock_embedding_service, mock_llm
-    ):
+    def test_generate_draft_response_schema(self, mock_settings, mock_embedding_service, mock_llm):
         """Response should have correct schema with RAG metadata."""
         self._reset_singletons()
 
@@ -77,28 +91,38 @@ class TestGenerateDraft:
                 with patch("app.services.retrieval.get_settings", return_value=mock_settings):
                     with patch("app.services.generation.get_settings", return_value=mock_settings):
                         with patch("app.rag.chunking.get_settings", return_value=mock_settings):
-                            with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                                with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                            with patch(
+                                "app.rag.vectorstore.get_settings", return_value=mock_settings
+                            ):
+                                with patch(
+                                    "app.rag.vectorstore.get_embedding_service",
+                                    return_value=mock_embedding_service,
+                                ):
                                     from app.main import app
+
                                     client = TestClient(app)
 
                                     # Upload document
                                     files = {
-                                        "file": ("test.txt", io.BytesIO(b"Content for testing."), "text/plain")
+                                        "file": (
+                                            "test.txt",
+                                            io.BytesIO(b"Content for testing."),
+                                            "text/plain",
+                                        )
                                     }
                                     client.post("/api/documents", files=files)
 
                                     from app.services.generation import GenerationService
+
                                     original_init = GenerationService.__init__
 
                                     def patched_init(self):
                                         original_init(self)
                                         self._llm = mock_llm
 
-                                    with patch.object(GenerationService, '__init__', patched_init):
+                                    with patch.object(GenerationService, "__init__", patched_init):
                                         response = client.post(
-                                            "/api/generate",
-                                            json={"prompt": "Test prompt"}
+                                            "/api/generate", json={"prompt": "Test prompt"}
                                         )
 
                                         result = response.json()
@@ -124,9 +148,7 @@ class TestGenerateDraft:
 
         self._reset_singletons()
 
-    def test_generate_empty_prompt_rejected(
-        self, mock_settings, mock_embedding_service
-    ):
+    def test_generate_empty_prompt_rejected(self, mock_settings, mock_embedding_service):
         """Should reject empty prompts."""
         self._reset_singletons()
 
@@ -134,23 +156,22 @@ class TestGenerateDraft:
             with patch("app.services.ingestion.get_settings", return_value=mock_settings):
                 with patch("app.rag.chunking.get_settings", return_value=mock_settings):
                     with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                        with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                        with patch(
+                            "app.rag.vectorstore.get_embedding_service",
+                            return_value=mock_embedding_service,
+                        ):
                             from app.main import app
+
                             client = TestClient(app)
 
-                            response = client.post(
-                                "/api/generate",
-                                json={"prompt": ""}
-                            )
+                            response = client.post("/api/generate", json={"prompt": ""})
 
                             # Should be rejected by validation
                             assert response.status_code == 422
 
         self._reset_singletons()
 
-    def test_generate_llm_error_503(
-        self, mock_settings, mock_embedding_service
-    ):
+    def test_generate_llm_error_503(self, mock_settings, mock_embedding_service):
         """LLM errors should return 503 status."""
         self._reset_singletons()
 
@@ -163,9 +184,15 @@ class TestGenerateDraft:
                 with patch("app.services.retrieval.get_settings", return_value=mock_settings):
                     with patch("app.services.generation.get_settings", return_value=mock_settings):
                         with patch("app.rag.chunking.get_settings", return_value=mock_settings):
-                            with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                                with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                            with patch(
+                                "app.rag.vectorstore.get_settings", return_value=mock_settings
+                            ):
+                                with patch(
+                                    "app.rag.vectorstore.get_embedding_service",
+                                    return_value=mock_embedding_service,
+                                ):
                                     from app.main import app
+
                                     client = TestClient(app)
 
                                     # Upload document
@@ -175,16 +202,16 @@ class TestGenerateDraft:
                                     client.post("/api/documents", files=files)
 
                                     from app.services.generation import GenerationService
+
                                     original_init = GenerationService.__init__
 
                                     def patched_init(self):
                                         original_init(self)
                                         self._llm = failing_llm
 
-                                    with patch.object(GenerationService, '__init__', patched_init):
+                                    with patch.object(GenerationService, "__init__", patched_init):
                                         response = client.post(
-                                            "/api/generate",
-                                            json={"prompt": "Test prompt"}
+                                            "/api/generate", json={"prompt": "Test prompt"}
                                         )
 
                                         assert response.status_code == 503
@@ -206,9 +233,15 @@ class TestGenerateDraft:
                 with patch("app.services.retrieval.get_settings", return_value=mock_settings):
                     with patch("app.services.generation.get_settings", return_value=mock_settings):
                         with patch("app.rag.chunking.get_settings", return_value=mock_settings):
-                            with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                                with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                            with patch(
+                                "app.rag.vectorstore.get_settings", return_value=mock_settings
+                            ):
+                                with patch(
+                                    "app.rag.vectorstore.get_embedding_service",
+                                    return_value=mock_embedding_service,
+                                ):
                                     from app.main import app
+
                                     client = TestClient(app)
 
                                     # Upload document
@@ -218,16 +251,16 @@ class TestGenerateDraft:
                                     client.post("/api/documents", files=files)
 
                                     from app.services.generation import GenerationService
+
                                     original_init = GenerationService.__init__
 
                                     def patched_init(self):
                                         original_init(self)
                                         self._llm = mock_llm
 
-                                    with patch.object(GenerationService, '__init__', patched_init):
+                                    with patch.object(GenerationService, "__init__", patched_init):
                                         response = client.post(
-                                            "/api/generate",
-                                            json={"prompt": "Test prompt"}
+                                            "/api/generate", json={"prompt": "Test prompt"}
                                         )
 
                                         result = response.json()
@@ -241,11 +274,11 @@ class TestGenerateDraft:
 
     def _reset_singletons(self):
         """Reset all singleton instances."""
+        import app.rag.embedding as embedding_module
+        import app.rag.vectorstore as vectorstore_module
+        import app.services.generation as generation_module
         import app.services.ingestion as ingestion_module
         import app.services.retrieval as retrieval_module
-        import app.services.generation as generation_module
-        import app.rag.vectorstore as vectorstore_module
-        import app.rag.embedding as embedding_module
 
         ingestion_module._ingestion_service = None
         retrieval_module._retrieval_service = None
@@ -257,47 +290,54 @@ class TestGenerateDraft:
 class TestRegenerateSection:
     """Tests for section regeneration endpoint."""
 
-    def test_regenerate_section_success(
-        self, mock_settings, mock_embedding_service, mock_llm
-    ):
+    def test_regenerate_section_success(self, mock_settings, mock_embedding_service, mock_llm):
         """Should successfully regenerate a section."""
         self._reset_singletons()
 
-        mock_llm.set_response(
-            "Regenerated content with [Source 1] improved citations."
-        )
+        mock_llm.set_response("Regenerated content with [Source 1] improved citations.")
 
         with patch("app.config.get_settings", return_value=mock_settings):
             with patch("app.services.ingestion.get_settings", return_value=mock_settings):
                 with patch("app.services.retrieval.get_settings", return_value=mock_settings):
                     with patch("app.services.generation.get_settings", return_value=mock_settings):
                         with patch("app.rag.chunking.get_settings", return_value=mock_settings):
-                            with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                                with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                            with patch(
+                                "app.rag.vectorstore.get_settings", return_value=mock_settings
+                            ):
+                                with patch(
+                                    "app.rag.vectorstore.get_embedding_service",
+                                    return_value=mock_embedding_service,
+                                ):
                                     from app.main import app
+
                                     client = TestClient(app)
 
                                     # Upload document
                                     files = {
-                                        "file": ("test.txt", io.BytesIO(b"Source content."), "text/plain")
+                                        "file": (
+                                            "test.txt",
+                                            io.BytesIO(b"Source content."),
+                                            "text/plain",
+                                        )
                                     }
                                     client.post("/api/documents", files=files)
 
                                     from app.services.generation import GenerationService
+
                                     original_init = GenerationService.__init__
 
                                     def patched_init(self):
                                         original_init(self)
                                         self._llm = mock_llm
 
-                                    with patch.object(GenerationService, '__init__', patched_init):
+                                    with patch.object(GenerationService, "__init__", patched_init):
                                         response = client.post(
                                             "/api/generate/section",
                                             json={
                                                 "section_id": "section-001",
                                                 "original_content": "Original section content to regenerate.",
                                                 "refinement_prompt": "Make it more detailed",
-                                            }
+                                            },
                                         )
 
                                         assert response.status_code == 200
@@ -319,11 +359,11 @@ class TestRegenerateSection:
 
     def _reset_singletons(self):
         """Reset all singleton instances."""
+        import app.rag.embedding as embedding_module
+        import app.rag.vectorstore as vectorstore_module
+        import app.services.generation as generation_module
         import app.services.ingestion as ingestion_module
         import app.services.retrieval as retrieval_module
-        import app.services.generation as generation_module
-        import app.rag.vectorstore as vectorstore_module
-        import app.rag.embedding as embedding_module
 
         ingestion_module._ingestion_service = None
         retrieval_module._retrieval_service = None
@@ -335,9 +375,7 @@ class TestRegenerateSection:
 class TestGenerationMetadata:
     """Tests for generation metadata verification."""
 
-    def test_generation_includes_timing(
-        self, mock_settings, mock_embedding_service, mock_llm
-    ):
+    def test_generation_includes_timing(self, mock_settings, mock_embedding_service, mock_llm):
         """Generation should include timing information."""
         self._reset_singletons()
 
@@ -346,9 +384,15 @@ class TestGenerationMetadata:
                 with patch("app.services.retrieval.get_settings", return_value=mock_settings):
                     with patch("app.services.generation.get_settings", return_value=mock_settings):
                         with patch("app.rag.chunking.get_settings", return_value=mock_settings):
-                            with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                                with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                            with patch(
+                                "app.rag.vectorstore.get_settings", return_value=mock_settings
+                            ):
+                                with patch(
+                                    "app.rag.vectorstore.get_embedding_service",
+                                    return_value=mock_embedding_service,
+                                ):
                                     from app.main import app
+
                                     client = TestClient(app)
 
                                     files = {
@@ -357,29 +401,29 @@ class TestGenerationMetadata:
                                     client.post("/api/documents", files=files)
 
                                     from app.services.generation import GenerationService
+
                                     original_init = GenerationService.__init__
 
                                     def patched_init(self):
                                         original_init(self)
                                         self._llm = mock_llm
 
-                                    with patch.object(GenerationService, '__init__', patched_init):
+                                    with patch.object(GenerationService, "__init__", patched_init):
                                         response = client.post(
-                                            "/api/generate",
-                                            json={"prompt": "Test"}
+                                            "/api/generate", json={"prompt": "Test"}
                                         )
 
                                         result = response.json()
 
                                         # Verify timing is present and positive
                                         assert result["generation_time_ms"] >= 0
-                                        assert result["retrieval_metadata"]["retrieval_time_ms"] >= 0
+                                        assert (
+                                            result["retrieval_metadata"]["retrieval_time_ms"] >= 0
+                                        )
 
         self._reset_singletons()
 
-    def test_generation_includes_model_used(
-        self, mock_settings, mock_embedding_service, mock_llm
-    ):
+    def test_generation_includes_model_used(self, mock_settings, mock_embedding_service, mock_llm):
         """Generation should specify which model was used."""
         self._reset_singletons()
 
@@ -388,9 +432,15 @@ class TestGenerationMetadata:
                 with patch("app.services.retrieval.get_settings", return_value=mock_settings):
                     with patch("app.services.generation.get_settings", return_value=mock_settings):
                         with patch("app.rag.chunking.get_settings", return_value=mock_settings):
-                            with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                                with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                            with patch(
+                                "app.rag.vectorstore.get_settings", return_value=mock_settings
+                            ):
+                                with patch(
+                                    "app.rag.vectorstore.get_embedding_service",
+                                    return_value=mock_embedding_service,
+                                ):
                                     from app.main import app
+
                                     client = TestClient(app)
 
                                     files = {
@@ -399,16 +449,16 @@ class TestGenerationMetadata:
                                     client.post("/api/documents", files=files)
 
                                     from app.services.generation import GenerationService
+
                                     original_init = GenerationService.__init__
 
                                     def patched_init(self):
                                         original_init(self)
                                         self._llm = mock_llm
 
-                                    with patch.object(GenerationService, '__init__', patched_init):
+                                    with patch.object(GenerationService, "__init__", patched_init):
                                         response = client.post(
-                                            "/api/generate",
-                                            json={"prompt": "Test"}
+                                            "/api/generate", json={"prompt": "Test"}
                                         )
 
                                         result = response.json()
@@ -420,11 +470,11 @@ class TestGenerationMetadata:
 
     def _reset_singletons(self):
         """Reset all singleton instances."""
+        import app.rag.embedding as embedding_module
+        import app.rag.vectorstore as vectorstore_module
+        import app.services.generation as generation_module
         import app.services.ingestion as ingestion_module
         import app.services.retrieval as retrieval_module
-        import app.services.generation as generation_module
-        import app.rag.vectorstore as vectorstore_module
-        import app.rag.embedding as embedding_module
 
         ingestion_module._ingestion_service = None
         retrieval_module._retrieval_service = None
@@ -436,9 +486,7 @@ class TestGenerationMetadata:
 class TestRAGMetadataVerification:
     """Tests to verify RAG metadata is never silently dropped."""
 
-    def test_sources_array_never_null(
-        self, mock_settings, mock_embedding_service, mock_llm
-    ):
+    def test_sources_array_never_null(self, mock_settings, mock_embedding_service, mock_llm):
         """Sources should always be an array, never null."""
         self._reset_singletons()
 
@@ -447,9 +495,15 @@ class TestRAGMetadataVerification:
                 with patch("app.services.retrieval.get_settings", return_value=mock_settings):
                     with patch("app.services.generation.get_settings", return_value=mock_settings):
                         with patch("app.rag.chunking.get_settings", return_value=mock_settings):
-                            with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                                with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                            with patch(
+                                "app.rag.vectorstore.get_settings", return_value=mock_settings
+                            ):
+                                with patch(
+                                    "app.rag.vectorstore.get_embedding_service",
+                                    return_value=mock_embedding_service,
+                                ):
                                     from app.main import app
+
                                     client = TestClient(app)
 
                                     files = {
@@ -458,32 +512,32 @@ class TestRAGMetadataVerification:
                                     client.post("/api/documents", files=files)
 
                                     from app.services.generation import GenerationService
+
                                     original_init = GenerationService.__init__
 
                                     def patched_init(self):
                                         original_init(self)
                                         self._llm = mock_llm
 
-                                    with patch.object(GenerationService, '__init__', patched_init):
+                                    with patch.object(GenerationService, "__init__", patched_init):
                                         response = client.post(
-                                            "/api/generate",
-                                            json={"prompt": "Test"}
+                                            "/api/generate", json={"prompt": "Test"}
                                         )
 
                                         result = response.json()
 
                                         for section in result["sections"]:
                                             # Critical: sources must NEVER be null
-                                            assert section["sources"] is not None, \
-                                                "sources should never be null"
-                                            assert isinstance(section["sources"], list), \
-                                                "sources should be a list"
+                                            assert (
+                                                section["sources"] is not None
+                                            ), "sources should never be null"
+                                            assert isinstance(
+                                                section["sources"], list
+                                            ), "sources should be a list"
 
         self._reset_singletons()
 
-    def test_confidence_always_present(
-        self, mock_settings, mock_embedding_service, mock_llm
-    ):
+    def test_confidence_always_present(self, mock_settings, mock_embedding_service, mock_llm):
         """Confidence level should always be present."""
         self._reset_singletons()
 
@@ -492,9 +546,15 @@ class TestRAGMetadataVerification:
                 with patch("app.services.retrieval.get_settings", return_value=mock_settings):
                     with patch("app.services.generation.get_settings", return_value=mock_settings):
                         with patch("app.rag.chunking.get_settings", return_value=mock_settings):
-                            with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                                with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                            with patch(
+                                "app.rag.vectorstore.get_settings", return_value=mock_settings
+                            ):
+                                with patch(
+                                    "app.rag.vectorstore.get_embedding_service",
+                                    return_value=mock_embedding_service,
+                                ):
                                     from app.main import app
+
                                     client = TestClient(app)
 
                                     files = {
@@ -503,16 +563,16 @@ class TestRAGMetadataVerification:
                                     client.post("/api/documents", files=files)
 
                                     from app.services.generation import GenerationService
+
                                     original_init = GenerationService.__init__
 
                                     def patched_init(self):
                                         original_init(self)
                                         self._llm = mock_llm
 
-                                    with patch.object(GenerationService, '__init__', patched_init):
+                                    with patch.object(GenerationService, "__init__", patched_init):
                                         response = client.post(
-                                            "/api/generate",
-                                            json={"prompt": "Test"}
+                                            "/api/generate", json={"prompt": "Test"}
                                         )
 
                                         result = response.json()
@@ -520,14 +580,15 @@ class TestRAGMetadataVerification:
                                         for section in result["sections"]:
                                             assert section["confidence"] is not None
                                             assert section["confidence"] in [
-                                                "high", "medium", "low", "unknown"
+                                                "high",
+                                                "medium",
+                                                "low",
+                                                "unknown",
                                             ]
 
         self._reset_singletons()
 
-    def test_warnings_array_always_present(
-        self, mock_settings, mock_embedding_service, mock_llm
-    ):
+    def test_warnings_array_always_present(self, mock_settings, mock_embedding_service, mock_llm):
         """Warnings should always be present as an array."""
         self._reset_singletons()
 
@@ -536,9 +597,15 @@ class TestRAGMetadataVerification:
                 with patch("app.services.retrieval.get_settings", return_value=mock_settings):
                     with patch("app.services.generation.get_settings", return_value=mock_settings):
                         with patch("app.rag.chunking.get_settings", return_value=mock_settings):
-                            with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                                with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                            with patch(
+                                "app.rag.vectorstore.get_settings", return_value=mock_settings
+                            ):
+                                with patch(
+                                    "app.rag.vectorstore.get_embedding_service",
+                                    return_value=mock_embedding_service,
+                                ):
                                     from app.main import app
+
                                     client = TestClient(app)
 
                                     files = {
@@ -547,16 +614,16 @@ class TestRAGMetadataVerification:
                                     client.post("/api/documents", files=files)
 
                                     from app.services.generation import GenerationService
+
                                     original_init = GenerationService.__init__
 
                                     def patched_init(self):
                                         original_init(self)
                                         self._llm = mock_llm
 
-                                    with patch.object(GenerationService, '__init__', patched_init):
+                                    with patch.object(GenerationService, "__init__", patched_init):
                                         response = client.post(
-                                            "/api/generate",
-                                            json={"prompt": "Test"}
+                                            "/api/generate", json={"prompt": "Test"}
                                         )
 
                                         result = response.json()
@@ -569,11 +636,11 @@ class TestRAGMetadataVerification:
 
     def _reset_singletons(self):
         """Reset all singleton instances."""
+        import app.rag.embedding as embedding_module
+        import app.rag.vectorstore as vectorstore_module
+        import app.services.generation as generation_module
         import app.services.ingestion as ingestion_module
         import app.services.retrieval as retrieval_module
-        import app.services.generation as generation_module
-        import app.rag.vectorstore as vectorstore_module
-        import app.rag.embedding as embedding_module
 
         ingestion_module._ingestion_service = None
         retrieval_module._retrieval_service = None

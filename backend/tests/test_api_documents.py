@@ -1,11 +1,9 @@
 """Tests for documents API endpoints."""
 
 import io
-import pytest
-from unittest.mock import patch, AsyncMock, MagicMock
-from fastapi.testclient import TestClient
+from unittest.mock import patch
 
-from app.models import Document, DocumentMetadata, DocumentStatus, DocumentType
+from fastapi.testclient import TestClient
 
 
 class TestDocumentUpload:
@@ -20,8 +18,12 @@ class TestDocumentUpload:
             with patch("app.services.ingestion.get_settings", return_value=mock_settings):
                 with patch("app.rag.chunking.get_settings", return_value=mock_settings):
                     with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                        with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                        with patch(
+                            "app.rag.vectorstore.get_embedding_service",
+                            return_value=mock_embedding_service,
+                        ):
                             from app.main import app
+
                             client = TestClient(app)
 
                             content = b"Test document content for upload testing."
@@ -45,7 +47,7 @@ class TestDocumentUpload:
                             assert "document_id" in result
                             assert result["filename"] == "test_document.txt"
                             assert result["document_type"] == "txt"
-                            assert result["status"] == "ready"
+                            assert result["status"] == "pending"
 
         self._reset_singletons()
 
@@ -57,12 +59,20 @@ class TestDocumentUpload:
             with patch("app.services.ingestion.get_settings", return_value=mock_settings):
                 with patch("app.rag.chunking.get_settings", return_value=mock_settings):
                     with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                        with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                        with patch(
+                            "app.rag.vectorstore.get_embedding_service",
+                            return_value=mock_embedding_service,
+                        ):
                             from app.main import app
+
                             client = TestClient(app)
 
                             files = {
-                                "file": ("test.xyz", io.BytesIO(b"content"), "application/octet-stream")
+                                "file": (
+                                    "test.xyz",
+                                    io.BytesIO(b"content"),
+                                    "application/octet-stream",
+                                )
                             }
 
                             response = client.post("/api/documents", files=files)
@@ -80,8 +90,12 @@ class TestDocumentUpload:
             with patch("app.services.ingestion.get_settings", return_value=mock_settings):
                 with patch("app.rag.chunking.get_settings", return_value=mock_settings):
                     with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                        with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                        with patch(
+                            "app.rag.vectorstore.get_embedding_service",
+                            return_value=mock_embedding_service,
+                        ):
                             from app.main import app
+
                             client = TestClient(app)
 
                             # Upload without file
@@ -94,11 +108,11 @@ class TestDocumentUpload:
 
     def _reset_singletons(self):
         """Reset all singleton instances."""
+        import app.rag.embedding as embedding_module
+        import app.rag.vectorstore as vectorstore_module
+        import app.services.generation as generation_module
         import app.services.ingestion as ingestion_module
         import app.services.retrieval as retrieval_module
-        import app.services.generation as generation_module
-        import app.rag.vectorstore as vectorstore_module
-        import app.rag.embedding as embedding_module
 
         ingestion_module._ingestion_service = None
         retrieval_module._retrieval_service = None
@@ -118,14 +132,22 @@ class TestDocumentList:
             with patch("app.services.ingestion.get_settings", return_value=mock_settings):
                 with patch("app.rag.chunking.get_settings", return_value=mock_settings):
                     with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                        with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                        with patch(
+                            "app.rag.vectorstore.get_embedding_service",
+                            return_value=mock_embedding_service,
+                        ):
                             from app.main import app
+
                             client = TestClient(app)
 
                             # Upload some documents first
                             for i in range(3):
                                 files = {
-                                    "file": (f"doc_{i}.txt", io.BytesIO(f"Content {i}".encode()), "text/plain")
+                                    "file": (
+                                        f"doc_{i}.txt",
+                                        io.BytesIO(f"Content {i}".encode()),
+                                        "text/plain",
+                                    )
                                 }
                                 client.post("/api/documents", files=files)
 
@@ -149,8 +171,12 @@ class TestDocumentList:
             with patch("app.services.ingestion.get_settings", return_value=mock_settings):
                 with patch("app.rag.chunking.get_settings", return_value=mock_settings):
                     with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                        with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                        with patch(
+                            "app.rag.vectorstore.get_embedding_service",
+                            return_value=mock_embedding_service,
+                        ):
                             from app.main import app
+
                             client = TestClient(app)
 
                             response = client.get("/api/documents")
@@ -165,11 +191,11 @@ class TestDocumentList:
 
     def _reset_singletons(self):
         """Reset all singleton instances."""
+        import app.rag.embedding as embedding_module
+        import app.rag.vectorstore as vectorstore_module
+        import app.services.generation as generation_module
         import app.services.ingestion as ingestion_module
         import app.services.retrieval as retrieval_module
-        import app.services.generation as generation_module
-        import app.rag.vectorstore as vectorstore_module
-        import app.rag.embedding as embedding_module
 
         ingestion_module._ingestion_service = None
         retrieval_module._retrieval_service = None
@@ -189,8 +215,12 @@ class TestDocumentGet:
             with patch("app.services.ingestion.get_settings", return_value=mock_settings):
                 with patch("app.rag.chunking.get_settings", return_value=mock_settings):
                     with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                        with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                        with patch(
+                            "app.rag.vectorstore.get_embedding_service",
+                            return_value=mock_embedding_service,
+                        ):
                             from app.main import app
+
                             client = TestClient(app)
 
                             # Upload a document
@@ -219,8 +249,12 @@ class TestDocumentGet:
             with patch("app.services.ingestion.get_settings", return_value=mock_settings):
                 with patch("app.rag.chunking.get_settings", return_value=mock_settings):
                     with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                        with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                        with patch(
+                            "app.rag.vectorstore.get_embedding_service",
+                            return_value=mock_embedding_service,
+                        ):
                             from app.main import app
+
                             client = TestClient(app)
 
                             response = client.get("/api/documents/nonexistent-id")
@@ -232,11 +266,11 @@ class TestDocumentGet:
 
     def _reset_singletons(self):
         """Reset all singleton instances."""
+        import app.rag.embedding as embedding_module
+        import app.rag.vectorstore as vectorstore_module
+        import app.services.generation as generation_module
         import app.services.ingestion as ingestion_module
         import app.services.retrieval as retrieval_module
-        import app.services.generation as generation_module
-        import app.rag.vectorstore as vectorstore_module
-        import app.rag.embedding as embedding_module
 
         ingestion_module._ingestion_service = None
         retrieval_module._retrieval_service = None
@@ -256,8 +290,12 @@ class TestDocumentDelete:
             with patch("app.services.ingestion.get_settings", return_value=mock_settings):
                 with patch("app.rag.chunking.get_settings", return_value=mock_settings):
                     with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                        with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                        with patch(
+                            "app.rag.vectorstore.get_embedding_service",
+                            return_value=mock_embedding_service,
+                        ):
                             from app.main import app
+
                             client = TestClient(app)
 
                             # Upload a document
@@ -287,8 +325,12 @@ class TestDocumentDelete:
             with patch("app.services.ingestion.get_settings", return_value=mock_settings):
                 with patch("app.rag.chunking.get_settings", return_value=mock_settings):
                     with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                        with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                        with patch(
+                            "app.rag.vectorstore.get_embedding_service",
+                            return_value=mock_embedding_service,
+                        ):
                             from app.main import app
+
                             client = TestClient(app)
 
                             response = client.delete("/api/documents/nonexistent-id")
@@ -299,11 +341,11 @@ class TestDocumentDelete:
 
     def _reset_singletons(self):
         """Reset all singleton instances."""
+        import app.rag.embedding as embedding_module
+        import app.rag.vectorstore as vectorstore_module
+        import app.services.generation as generation_module
         import app.services.ingestion as ingestion_module
         import app.services.retrieval as retrieval_module
-        import app.services.generation as generation_module
-        import app.rag.vectorstore as vectorstore_module
-        import app.rag.embedding as embedding_module
 
         ingestion_module._ingestion_service = None
         retrieval_module._retrieval_service = None
@@ -323,13 +365,15 @@ class TestDocumentResponseSchema:
             with patch("app.services.ingestion.get_settings", return_value=mock_settings):
                 with patch("app.rag.chunking.get_settings", return_value=mock_settings):
                     with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                        with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                        with patch(
+                            "app.rag.vectorstore.get_embedding_service",
+                            return_value=mock_embedding_service,
+                        ):
                             from app.main import app
+
                             client = TestClient(app)
 
-                            files = {
-                                "file": ("test.txt", io.BytesIO(b"Content"), "text/plain")
-                            }
+                            files = {"file": ("test.txt", io.BytesIO(b"Content"), "text/plain")}
                             response = client.post("/api/documents", files=files)
                             result = response.json()
 
@@ -358,13 +402,15 @@ class TestDocumentResponseSchema:
             with patch("app.services.ingestion.get_settings", return_value=mock_settings):
                 with patch("app.rag.chunking.get_settings", return_value=mock_settings):
                     with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                        with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                        with patch(
+                            "app.rag.vectorstore.get_embedding_service",
+                            return_value=mock_embedding_service,
+                        ):
                             from app.main import app
+
                             client = TestClient(app)
 
-                            files = {
-                                "file": ("test.txt", io.BytesIO(b"Content"), "text/plain")
-                            }
+                            files = {"file": ("test.txt", io.BytesIO(b"Content"), "text/plain")}
                             response = client.post("/api/documents", files=files)
                             metadata = response.json()["metadata"]
 
@@ -376,11 +422,11 @@ class TestDocumentResponseSchema:
 
     def _reset_singletons(self):
         """Reset all singleton instances."""
+        import app.rag.embedding as embedding_module
+        import app.rag.vectorstore as vectorstore_module
+        import app.services.generation as generation_module
         import app.services.ingestion as ingestion_module
         import app.services.retrieval as retrieval_module
-        import app.services.generation as generation_module
-        import app.rag.vectorstore as vectorstore_module
-        import app.rag.embedding as embedding_module
 
         ingestion_module._ingestion_service = None
         retrieval_module._retrieval_service = None

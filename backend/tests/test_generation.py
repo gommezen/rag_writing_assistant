@@ -1,20 +1,17 @@
 """Tests for generation service."""
 
-import pytest
-from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 from app.core import LLMError
 from app.models import (
     ConfidenceLevel,
-    GeneratedSection,
-    RetrievalMetadata,
-    SourceReference,
 )
 from app.rag.prompts import extract_citations
 from app.services.generation import GenerationService
 
 
+@pytest.mark.integration
 class TestGenerationServiceBasics:
     """Tests for basic generation functionality."""
 
@@ -34,14 +31,23 @@ class TestGenerationServiceBasics:
         with patch("app.services.generation.get_settings", return_value=mock_settings):
             with patch("app.services.retrieval.get_settings", return_value=mock_settings):
                 with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                    with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                    with patch(
+                        "app.rag.vectorstore.get_embedding_service",
+                        return_value=mock_embedding_service,
+                    ):
                         from app.rag.vectorstore import VectorStore
+
                         vector_store = VectorStore(store_path=mock_settings.vectors_dir)
                         vector_store.add_chunks(chunks)
 
-                        with patch("app.services.retrieval.get_vector_store", return_value=vector_store):
-                            with patch("app.services.generation.get_retrieval_service") as mock_retrieval:
+                        with patch(
+                            "app.services.retrieval.get_vector_store", return_value=vector_store
+                        ):
+                            with patch(
+                                "app.services.generation.get_retrieval_service"
+                            ) as mock_retrieval:
                                 from app.services.retrieval import RetrievalService
+
                                 real_retrieval = RetrievalService()
                                 mock_retrieval.return_value = real_retrieval
 
@@ -70,21 +76,28 @@ class TestGenerationServiceBasics:
         """Generated sections should include confidence levels."""
         chunks = sample_chunks_factory(count=5)
 
-        mock_llm.set_response(
-            "Generated content with [Source 1] citations [Source 2]."
-        )
+        mock_llm.set_response("Generated content with [Source 1] citations [Source 2].")
 
         with patch("app.services.generation.get_settings", return_value=mock_settings):
             with patch("app.services.retrieval.get_settings", return_value=mock_settings):
                 with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                    with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                    with patch(
+                        "app.rag.vectorstore.get_embedding_service",
+                        return_value=mock_embedding_service,
+                    ):
                         from app.rag.vectorstore import VectorStore
+
                         vector_store = VectorStore(store_path=mock_settings.vectors_dir)
                         vector_store.add_chunks(chunks)
 
-                        with patch("app.services.retrieval.get_vector_store", return_value=vector_store):
-                            with patch("app.services.generation.get_retrieval_service") as mock_retrieval:
+                        with patch(
+                            "app.services.retrieval.get_vector_store", return_value=vector_store
+                        ):
+                            with patch(
+                                "app.services.generation.get_retrieval_service"
+                            ) as mock_retrieval:
                                 from app.services.retrieval import RetrievalService
+
                                 mock_retrieval.return_value = RetrievalService()
 
                                 with patch("app.services.generation.get_validation_service"):
@@ -110,14 +123,23 @@ class TestGenerationServiceBasics:
         with patch("app.services.generation.get_settings", return_value=mock_settings):
             with patch("app.services.retrieval.get_settings", return_value=mock_settings):
                 with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                    with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                    with patch(
+                        "app.rag.vectorstore.get_embedding_service",
+                        return_value=mock_embedding_service,
+                    ):
                         from app.rag.vectorstore import VectorStore
+
                         vector_store = VectorStore(store_path=mock_settings.vectors_dir)
                         vector_store.add_chunks(chunks)
 
-                        with patch("app.services.retrieval.get_vector_store", return_value=vector_store):
-                            with patch("app.services.generation.get_retrieval_service") as mock_retrieval:
+                        with patch(
+                            "app.services.retrieval.get_vector_store", return_value=vector_store
+                        ):
+                            with patch(
+                                "app.services.generation.get_retrieval_service"
+                            ) as mock_retrieval:
                                 from app.services.retrieval import RetrievalService
+
                                 mock_retrieval.return_value = RetrievalService()
 
                                 with patch("app.services.generation.get_validation_service"):
@@ -134,6 +156,7 @@ class TestGenerationServiceBasics:
                                         assert isinstance(section.warnings, list)
 
 
+@pytest.mark.integration
 class TestGenerationWithNoSources:
     """Tests for generation behavior when no sources are found."""
 
@@ -142,25 +165,34 @@ class TestGenerationWithNoSources:
         self, mock_settings, mock_embedding_service, mock_llm
     ):
         """Generation with no sources should include warnings."""
-        mock_llm.set_response(
-            "I don't have enough information to write about this topic."
-        )
+        mock_llm.set_response("I don't have enough information to write about this topic.")
 
         with patch("app.services.generation.get_settings", return_value=mock_settings):
             with patch("app.services.retrieval.get_settings", return_value=mock_settings):
                 with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                    with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                    with patch(
+                        "app.rag.vectorstore.get_embedding_service",
+                        return_value=mock_embedding_service,
+                    ):
                         # Empty vector store
                         from app.rag.vectorstore import VectorStore
+
                         vector_store = VectorStore(store_path=mock_settings.vectors_dir)
 
-                        with patch("app.services.retrieval.get_vector_store", return_value=vector_store):
-                            with patch("app.services.generation.get_retrieval_service") as mock_retrieval:
+                        with patch(
+                            "app.services.retrieval.get_vector_store", return_value=vector_store
+                        ):
+                            with patch(
+                                "app.services.generation.get_retrieval_service"
+                            ) as mock_retrieval:
                                 from app.services.retrieval import RetrievalService
+
                                 mock_retrieval.return_value = RetrievalService()
 
                                 # Mock validation service to return warnings
-                                with patch("app.services.generation.get_validation_service") as mock_val:
+                                with patch(
+                                    "app.services.generation.get_validation_service"
+                                ) as mock_val:
                                     mock_validation = MagicMock()
                                     mock_validation.check_retrieval_quality.return_value = [
                                         "insufficient_context: No relevant sources found"
@@ -184,6 +216,7 @@ class TestGenerationWithNoSources:
                                         ]
 
 
+@pytest.mark.integration
 class TestGenerationErrors:
     """Tests for error handling in generation."""
 
@@ -200,14 +233,23 @@ class TestGenerationErrors:
         with patch("app.services.generation.get_settings", return_value=mock_settings):
             with patch("app.services.retrieval.get_settings", return_value=mock_settings):
                 with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                    with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                    with patch(
+                        "app.rag.vectorstore.get_embedding_service",
+                        return_value=mock_embedding_service,
+                    ):
                         from app.rag.vectorstore import VectorStore
+
                         vector_store = VectorStore(store_path=mock_settings.vectors_dir)
                         vector_store.add_chunks(chunks)
 
-                        with patch("app.services.retrieval.get_vector_store", return_value=vector_store):
-                            with patch("app.services.generation.get_retrieval_service") as mock_retrieval:
+                        with patch(
+                            "app.services.retrieval.get_vector_store", return_value=vector_store
+                        ):
+                            with patch(
+                                "app.services.generation.get_retrieval_service"
+                            ) as mock_retrieval:
                                 from app.services.retrieval import RetrievalService
+
                                 mock_retrieval.return_value = RetrievalService()
 
                                 with patch("app.services.generation.get_validation_service"):
@@ -324,6 +366,7 @@ class TestConfidenceAssessment:
                         assert confidence == ConfidenceLevel.LOW
 
 
+@pytest.mark.integration
 class TestRegenerateSection:
     """Tests for section regeneration."""
 
@@ -334,21 +377,28 @@ class TestRegenerateSection:
         """Regenerated section should preserve the original section ID."""
         chunks = sample_chunks_factory(count=5)
 
-        mock_llm.set_response(
-            "Regenerated content with [Source 1] citations."
-        )
+        mock_llm.set_response("Regenerated content with [Source 1] citations.")
 
         with patch("app.services.generation.get_settings", return_value=mock_settings):
             with patch("app.services.retrieval.get_settings", return_value=mock_settings):
                 with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                    with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                    with patch(
+                        "app.rag.vectorstore.get_embedding_service",
+                        return_value=mock_embedding_service,
+                    ):
                         from app.rag.vectorstore import VectorStore
+
                         vector_store = VectorStore(store_path=mock_settings.vectors_dir)
                         vector_store.add_chunks(chunks)
 
-                        with patch("app.services.retrieval.get_vector_store", return_value=vector_store):
-                            with patch("app.services.generation.get_retrieval_service") as mock_retrieval:
+                        with patch(
+                            "app.services.retrieval.get_vector_store", return_value=vector_store
+                        ):
+                            with patch(
+                                "app.services.generation.get_retrieval_service"
+                            ) as mock_retrieval:
                                 from app.services.retrieval import RetrievalService
+
                                 mock_retrieval.return_value = RetrievalService()
 
                                 with patch("app.services.generation.get_validation_service"):
@@ -373,14 +423,23 @@ class TestRegenerateSection:
         with patch("app.services.generation.get_settings", return_value=mock_settings):
             with patch("app.services.retrieval.get_settings", return_value=mock_settings):
                 with patch("app.rag.vectorstore.get_settings", return_value=mock_settings):
-                    with patch("app.rag.vectorstore.get_embedding_service", return_value=mock_embedding_service):
+                    with patch(
+                        "app.rag.vectorstore.get_embedding_service",
+                        return_value=mock_embedding_service,
+                    ):
                         from app.rag.vectorstore import VectorStore
+
                         vector_store = VectorStore(store_path=mock_settings.vectors_dir)
                         vector_store.add_chunks(chunks)
 
-                        with patch("app.services.retrieval.get_vector_store", return_value=vector_store):
-                            with patch("app.services.generation.get_retrieval_service") as mock_retrieval:
+                        with patch(
+                            "app.services.retrieval.get_vector_store", return_value=vector_store
+                        ):
+                            with patch(
+                                "app.services.generation.get_retrieval_service"
+                            ) as mock_retrieval:
                                 from app.services.retrieval import RetrievalService
+
                                 mock_retrieval.return_value = RetrievalService()
 
                                 with patch("app.services.generation.get_validation_service"):
@@ -488,10 +547,7 @@ class TestSourceMapping:
                         assert len(section.sources) > 0
                         # Sources should be from the provided list
                         for source in section.sources:
-                            assert any(
-                                s.chunk_id == source.chunk_id
-                                for s in sample_sources
-                            )
+                            assert any(s.chunk_id == source.chunk_id for s in sample_sources)
 
     def test_create_section_uses_top_sources_when_no_citations(
         self, mock_settings, mock_embedding_service, sample_sources

@@ -7,14 +7,13 @@ import time
 from datetime import UTC, datetime
 from uuid import uuid4
 
-from langchain_ollama import ChatOllama
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_ollama import ChatOllama
 
 from ..config import get_settings
-from ..core import GenerationError, LLMError, get_logger
+from ..core import LLMError, get_logger
 from ..models import (
     ConfidenceLevel,
-    CoverageDescriptor,
     GeneratedSection,
     GenerationResult,
     IntentClassification,
@@ -28,11 +27,9 @@ from ..models import (
     SummaryScope,
 )
 from ..rag import (
-    build_analysis_prompt,
     build_coverage_aware_generation_prompt,
     build_exploratory_summary_prompt,
     build_focused_summary_prompt,
-    build_generation_prompt,
     build_regeneration_prompt,
     build_suggested_questions_prompt,
     extract_citations,
@@ -78,7 +75,11 @@ class GenerationService:
             QueryIntent.QA: self.settings.qa_model,
             QueryIntent.WRITING: self.settings.writing_model,
         }
-        model = model_map.get(intent, self.settings.generation_model) if intent else self.settings.generation_model
+        model = (
+            model_map.get(intent, self.settings.generation_model)
+            if intent
+            else self.settings.generation_model
+        )
 
         return self._get_or_create_llm(model), model
 
@@ -215,7 +216,7 @@ class GenerationService:
         retrieval_confidence = self.confidence_service.compute(sources, coverage)
 
         # Check if we have enough context
-        warnings = self.validation_service.check_retrieval_quality(sources)
+        self.validation_service.check_retrieval_quality(sources)
 
         # Build prompt with context
         source_dicts = [
@@ -480,7 +481,9 @@ class GenerationService:
 
         if not sources:
             return SuggestedQuestionsResponse(
-                questions=["What topics would you like to explore? Upload documents to get started."],
+                questions=[
+                    "What topics would you like to explore? Upload documents to get started."
+                ],
                 source_documents=[],
                 generation_time_ms=(time.time() - start_time) * 1000,
             )
@@ -672,12 +675,12 @@ class GenerationService:
         import re
 
         # Check for markdown headings - if present, split on them
-        heading_pattern = r'^#{2,3}\s+.+$'
+        heading_pattern = r"^#{2,3}\s+.+$"
         has_headings = bool(re.search(heading_pattern, content, re.MULTILINE))
 
         if has_headings:
             # Split on markdown headings, keeping the heading with its content
-            parts = re.split(r'(^#{2,3}\s+.+$)', content, flags=re.MULTILINE)
+            parts = re.split(r"(^#{2,3}\s+.+$)", content, flags=re.MULTILINE)
             sections = []
             section_idx = 0
             current_title: str | None = None
@@ -702,7 +705,7 @@ class GenerationService:
                         section_idx += 1
                         current_content = []
                     # Extract title from heading (remove ## or ### prefix)
-                    current_title = re.sub(r'^#{2,3}\s+', '', part).strip()
+                    current_title = re.sub(r"^#{2,3}\s+", "", part).strip()
                 else:
                     current_content.append(part)
 
@@ -717,11 +720,17 @@ class GenerationService:
                 )
                 sections.append(section)
 
-            return sections if sections else [self._create_section(
-                content=content,
-                sources=sources,
-                section_id=f"{generation_id}-0",
-            )]
+            return (
+                sections
+                if sections
+                else [
+                    self._create_section(
+                        content=content,
+                        sources=sources,
+                        section_id=f"{generation_id}-0",
+                    )
+                ]
+            )
 
         # No headings found - treat as single cohesive document (e.g., cover letter)
         # Split into sections only if content is very long (>1500 chars)
