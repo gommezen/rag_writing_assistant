@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     ollama_num_ctx: int = 4096
 
     # Intent-specific models
-    analysis_model: str = "llama3.1:8b-instruct-q8_0"  # Higher quality for deep analysis
+    analysis_model: str = "glm-4.7-flash"              # Higher quality for deep analysis
     writing_model: str = "qwen2.5:7b-instruct-q4_0"    # Best prose quality
     qa_model: str = "gemma3:4b"                        # Fast for simple questions
 
@@ -48,7 +48,7 @@ class Settings(BaseSettings):
     reranker_initial_k: int = 20  # Retrieve more chunks for reranking
 
     # Confidence-based model routing
-    fast_model: str = "gemma3:4b"                    # HIGH confidence retrieval
+    fast_model: str = "qwen2.5:1.5b-instruct"         # HIGH confidence retrieval
     standard_model: str = "qwen2.5:7b-instruct-q4_0"  # MEDIUM confidence retrieval
     quality_model: str = "llama3.1:8b-instruct-q4_0"  # LOW confidence retrieval
 
