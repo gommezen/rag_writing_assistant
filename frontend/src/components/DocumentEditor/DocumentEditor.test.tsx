@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { DocumentEditor } from './DocumentEditor';
 import { createMockSection, createMockSections, createMockSources } from '../../test/mocks';
 
@@ -45,11 +45,11 @@ describe('DocumentEditor', () => {
       expect(screen.getByText('Section 3')).toBeInTheDocument();
     });
 
-    it('renders section content in textareas', () => {
+    it('renders section content', () => {
       const section = createMockSection({ content: 'Unique test content here' });
       render(<DocumentEditor {...defaultProps} sections={[section]} />);
 
-      expect(screen.getByDisplayValue('Unique test content here')).toBeInTheDocument();
+      expect(screen.getByText('Unique test content here')).toBeInTheDocument();
     });
   });
 
@@ -57,12 +57,14 @@ describe('DocumentEditor', () => {
     it('shows sources for selected section', () => {
       const sources = createMockSources(2);
       const section = createMockSection({ sources });
-      render(<DocumentEditor {...defaultProps} sections={[section]} />);
+      const { container } = render(<DocumentEditor {...defaultProps} sections={[section]} />);
 
       // First section should be selected by default
       expect(screen.getByText('Sources')).toBeInTheDocument();
-      expect(screen.getByText('[Source 1]')).toBeInTheDocument();
-      expect(screen.getByText('[Source 2]')).toBeInTheDocument();
+      // Source indices appear in both inline citations and sidebar cards; scope to sidebar
+      const sidebar = container.querySelector('.document-editor__sidebar') as HTMLElement;
+      expect(within(sidebar).getByText('[Source 1]')).toBeInTheDocument();
+      expect(within(sidebar).getByText('[Source 2]')).toBeInTheDocument();
     });
 
     it('shows empty sources message when section has no sources', () => {
@@ -94,8 +96,14 @@ describe('DocumentEditor', () => {
         />
       );
 
-      const textarea = screen.getByDisplayValue('Original');
+      // Enter edit mode
+      fireEvent.click(screen.getByRole('button', { name: 'Edit section' }));
+
+      const textarea = screen.getByRole('textbox');
       fireEvent.change(textarea, { target: { value: 'Updated content' } });
+
+      // Save the edit
+      fireEvent.click(screen.getByText('Save'));
 
       expect(onSectionChange).toHaveBeenCalledWith('sec-1', 'Updated content');
     });
@@ -199,7 +207,7 @@ describe('DocumentEditor', () => {
       expect(regeneratingButton).toBeDefined();
     });
 
-    it('disables textarea when section is regenerating', () => {
+    it('hides edit button when section is regenerating', () => {
       const section = createMockSection({ section_id: 'sec-regen' });
       render(
         <DocumentEditor
@@ -209,8 +217,7 @@ describe('DocumentEditor', () => {
         />
       );
 
-      const textarea = screen.getByRole('textbox');
-      expect(textarea).toBeDisabled();
+      expect(screen.queryByRole('button', { name: 'Edit section' })).not.toBeInTheDocument();
     });
   });
 
@@ -270,12 +277,14 @@ describe('DocumentEditor', () => {
     it('renders sidebar with sources', () => {
       const sources = createMockSources(3);
       const section = createMockSection({ sources });
-      render(<DocumentEditor {...defaultProps} sections={[section]} />);
+      const { container } = render(<DocumentEditor {...defaultProps} sections={[section]} />);
 
       expect(screen.getByText('Sources')).toBeInTheDocument();
-      expect(screen.getByText('[Source 1]')).toBeInTheDocument();
-      expect(screen.getByText('[Source 2]')).toBeInTheDocument();
-      expect(screen.getByText('[Source 3]')).toBeInTheDocument();
+      // Scope to sidebar to avoid matching inline citations
+      const sidebar = container.querySelector('.document-editor__sidebar') as HTMLElement;
+      expect(within(sidebar).getByText('[Source 1]')).toBeInTheDocument();
+      expect(within(sidebar).getByText('[Source 2]')).toBeInTheDocument();
+      expect(within(sidebar).getByText('[Source 3]')).toBeInTheDocument();
     });
   });
 });

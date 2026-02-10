@@ -83,23 +83,23 @@ describe('ChatMessage', () => {
     it('toggles source visibility on button click', () => {
       const message = createMockAssistantMessage();
 
-      render(<ChatMessage message={message} />);
+      const { container } = render(<ChatMessage message={message} />);
 
-      // Sources should be hidden initially
-      expect(screen.queryByText('[Source 1]')).not.toBeInTheDocument();
+      // Source cards should be hidden initially (inline citations are always visible)
+      expect(container.querySelector('.source-card')).not.toBeInTheDocument();
 
       // Click to show sources
       const toggleButton = screen.getByText(/\d+ source/);
       fireEvent.click(toggleButton);
 
-      // Sources should now be visible
-      expect(screen.getByText('[Source 1]')).toBeInTheDocument();
+      // Source cards should now be visible
+      expect(container.querySelector('.source-card')).toBeInTheDocument();
 
       // Click again to hide
       fireEvent.click(toggleButton);
 
-      // Sources should be hidden again
-      expect(screen.queryByText('[Source 1]')).not.toBeInTheDocument();
+      // Source cards should be hidden again
+      expect(container.querySelector('.source-card')).not.toBeInTheDocument();
     });
 
     it('displays correct source count label (singular)', () => {
@@ -150,10 +150,10 @@ describe('ChatMessage', () => {
       const message = createMockAssistantMessage();
       const handleSelect = vi.fn();
 
-      render(<ChatMessage message={message} onSelect={handleSelect} />);
+      const { container } = render(<ChatMessage message={message} onSelect={handleSelect} />);
 
-      const messageElement = screen.getByText(message.content).closest('.chat-message');
-      fireEvent.click(messageElement!);
+      const messageElement = container.querySelector('.chat-message')!;
+      fireEvent.click(messageElement);
 
       expect(handleSelect).toHaveBeenCalledTimes(1);
     });
