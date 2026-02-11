@@ -607,12 +607,9 @@ class TestChatServiceIntegration:
         embedding_module._embedding_service = None
 
     def _inject_mock_llm(self, gen_service, mock_llm, settings):
-        """Inject mock LLM into generation service's cache."""
-        # Inject into the LLM cache for all model types
-        gen_service._llm_cache[settings.generation_model] = mock_llm
-        gen_service._llm_cache[settings.analysis_model] = mock_llm
-        gen_service._llm_cache[settings.writing_model] = mock_llm
-        gen_service._llm_cache[settings.qa_model] = mock_llm
+        """Inject mock LLM into generation service."""
+        # Override LLM creation to always return the mock
+        gen_service._get_or_create_llm = lambda model: mock_llm
 
     @pytest.mark.asyncio
     async def test_chat_creates_new_conversation(
@@ -826,11 +823,8 @@ class TestCumulativeCoverage:
         embedding_module._embedding_service = None
 
     def _inject_mock_llm(self, gen_service, mock_llm, settings):
-        """Inject mock LLM into generation service's cache."""
-        gen_service._llm_cache[settings.generation_model] = mock_llm
-        gen_service._llm_cache[settings.analysis_model] = mock_llm
-        gen_service._llm_cache[settings.writing_model] = mock_llm
-        gen_service._llm_cache[settings.qa_model] = mock_llm
+        """Inject mock LLM into generation service."""
+        gen_service._get_or_create_llm = lambda model: mock_llm
 
     @pytest.mark.asyncio
     async def test_coverage_tracked_across_turns(
