@@ -211,6 +211,9 @@ Thumbs.db
 # ============================================================================
 CLAUDE.md
 .claude/
+# Keep our agent instructions tracked
+!CLAUDE.md
+!.claude/commands/
 
 # ============================================================================
 # Development notes (personal)
