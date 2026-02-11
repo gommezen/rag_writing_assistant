@@ -89,11 +89,11 @@ The project uses specialized Claude Code agent roles (in `.claude/commands/`):
 
 1. **RAG & Governance Architect** (`/rag_governance_architect`) - Reviews RAG design, prompts, and data handling. Operates as reviewer/challenger, not primary implementer.
 
-2. **Frontend Enablement Agent** (`/frontend_enablement_agent`) - Designs transparent, inspectable UIs that make AI behavior understandable. Design authority for frontend.
+2. **Compliance & CI Agent** (`/compliance_ci_agent`) - Enforces governance invariants, schema contracts, and CI tooling integrity.
 
-3. **UI Component Agent** (`/ui-component`) - Generates React component implementations. Subordinate to Frontend Enablement Agent.
+3. **Test Guardian** (`/test_guardian`) - Verifies test mocks, selectors, and CI parity after refactors. Prevents stale tests from reaching CI.
 
-4. **Project Instructions** (`/project_instructions`) - Project-specific coding standards for RAG pipeline, components, and data structures.
+4. **Project Instructions** (`/project_instructions`) - Project-specific coding standards for RAG pipeline, frontend design principles, and data structures.
 
 ### Design Principles
 
@@ -151,8 +151,8 @@ The project uses specialized Claude Code agent roles (in `.claude/commands/`):
 
 ## Agent Collaboration Rules
 
-- Frontend agent must not modify backend contracts without approval
-- UI Component agent implements designs from Frontend Enablement Agent
+- Do not modify backend API contracts without RAG architect approval
+- Test guardian must be invoked after any service or component refactor
 - RAG architect reviews all retrieval/prompt changes
 - Prefer simple, auditable solutions over complex ones
 - Escalate unclear requirements rather than guessing

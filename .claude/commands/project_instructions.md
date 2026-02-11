@@ -23,6 +23,18 @@ This is a RAG writing assistant with a governance-first architecture. Code must 
 - Handle missing/partial data explicitly—show gaps, don't hide them
 - Use TypeScript with strict mode for all React components
 
+### Frontend Design Principles (UX Invariants)
+
+These are non-negotiable and apply to all UI work:
+
+1. **Transparency Over Automation** — AI-generated content must never appear without visible provenance (sources, confidence, warnings visible by default)
+2. **Control Over Magic** — Users can regenerate sections, edit all text, revert changes. No irreversible actions or hidden state
+3. **Calm, Professional Interface** — Neutral editorial tone, no chatty language, enterprise-suitable
+
+**Component catalog**: `DocumentEditor` (section-level editing with view/edit modes), `SourceCard` (retrieved excerpts with relevance scores), `WarningBanner` (neutral guidance), `GenerationControls` (regenerate/accept/revert), `ConfidenceIndicator` (high/medium/low/unknown with distinct visuals — unknown ≠ low)
+
+**Confidence display**: `null`/`undefined` = Unknown (gray, "?"), `< 0.4` = Low (amber), `0.4–0.7` = Medium (blue), `> 0.7` = High (green)
+
 ### Data Structures
 Always include provenance in AI-generated content:
 ```python
